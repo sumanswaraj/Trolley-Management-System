@@ -1,0 +1,6 @@
+{$TROLLEY_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy trolley:8080 {
+    header_up Host {host}
+  }
+}

@@ -13,8 +13,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   for (const signal of ['SIGINT', 'SIGTERM']) {
     process.once(signal, () => {
       console.log(JSON.stringify({ event: 'shutdown', signal }));
-      server.close(() => { repository.close(); process.exit(0); });
-      setTimeout(() => { server.closeAllConnections(); }, 5000).unref();
+      server.close(() => {
+        repository.close();
+        process.exit(0);
+      });
+      setTimeout(() => {
+        server.closeAllConnections();
+      }, 5000).unref();
     });
   }
 }

@@ -2,10 +2,11 @@ services:
   trolley:
     build: .
     ports:
-      - "127.0.0.1:8080:8080"
+      - '127.0.0.1:8080:8080'
     environment:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
-      SECURE_COOKIE: "false"
+      SECURE_COOKIE: 'false'
+      DEVICE_ENCRYPTION_KEY: ${DEVICE_ENCRYPTION_KEY:-}
     volumes:
       - trolley-data:/app/data
     restart: unless-stopped

@@ -1,28 +1,28 @@
 # Delivery status and enterprise release plan
 
-## Implemented in version 0.3
+## Implemented in 0.3
 
-- Responsive UI connected to shared API state; desktop sidebar and phone navigation.
-- Named users, salted password hashes, sessions, server roles, account deactivation and session revocation.
-- Persistent location/product/trolley masters and an empty-plant setup workflow.
-- Departure, approval/rejection and receipt with transactional history and audit writes.
-- Idempotency keys, stale-version checks, duplicate/open-movement prevention and no self-approval.
-- Overdue dashboard, fleet search and CSV movement export based on real database records.
-- Module boundaries, versioned SQL migrations, test scripts, CI workflow, Docker/Compose and Windows launcher.
-- Consistent online backup script and deployment/recovery documentation.
+Shared frontend/API, users and sessions, master data, departure/approval/receipt, transactional audit/history, version checks, idempotency, deployment packages and backup tools.
 
-## Next release: plant policy and scanning
+## Implemented in 0.4
 
-Define product categories, compatible trolley types, capacity units, allowed routes and quality release rules from the actual plant. Apply these rules in the movement service; supervisor overrides must record a reason and approved exceptions. Add camera QR scanning with USB/manual fallback. Confirm RFID reader model, protocol and gate directions before implementing a signed device-ingestion API and offline replay protection.
+- Configurable category/type compatibility, allowed routes, quality releases and capacity units.
+- Independent policy exception approvals with immutable flags and recorded reasons.
+- Source/destination mutation permissions by user and location.
+- Complete paged histories and CSV export; real-event reporting; restricted audit visibility.
+- Camera QR scan with native/local decoder, physical receipt confirmation and QR label generation.
+- Signed reader event API, encrypted per-reader keys, mapping, rotation/revocation and observation deduplication.
+- Desktop/phone browser tests, real QR decoding with a simulated stream, migration preservation and isolated load smoke.
+- Formatting tooling and updated deployment/device/policy documentation.
+
+## Next: physical plant pilot
+
+Confirm hosting, plant layout, categories, units, routes, reader model/protocol, tag format and antenna direction. Configure identities, rules and location rights. Fit labels and bridge the reader protocol to the signed observation contract. Run actual camera/reader tests, clock/offline/retry scenarios and supervised departures/receipts with two or more users. Keep observations separate from confirmed movements until the physical evidence is validated.
 
 ## Enterprise infrastructure release
 
-Implement PostgreSQL and migration tests, paginated reads, complete period reporting, managed identity/SSO, password recovery, location-scoped roles, scalable sessions/rate limits, monitoring and disaster recovery automation. Test multi-client concurrency, load, security, migrations and backup restoration in the intended hosting environment before rollout. Preserve the frontend/service/repository boundaries while adding these capabilities.
+Implement PostgreSQL and migration tests, managed SSO/MFA/password recovery, scalable sessions/rate limits, durable device buffering, paginated large-fleet APIs, monitoring and disaster recovery automation. Define availability, retention and load targets, then conduct multi-hour load/soak, external security review and recovery exercises. Complete multi-stage approvals and data visibility scopes if required by the plant. Deploy only into confirmed hosting with HTTPS and operational ownership.
 
-## Decisions still needed for physical deployment
+## Acceptance evidence
 
-Hosting (plant server or cloud), company identity provider, reader models, plant layout, capacity units, route rules, approval hierarchy, retention and availability targets. These are not guessed or inferred from the prototype.
-
-## Acceptance criteria
-
-Two users see the same persisted state; unauthorized master/user/approval requests are denied by the API; movement retries do not duplicate history; stale commands return conflicts; departure and receipt are independently recorded; restart preserves records; account deactivation revokes sessions; history remains intact; reports contain recorded events only. Load, device and recovery evidence remains required for enterprise release.
+See docs/VALIDATION.md. Local tests verify shared persisted state, server-side permissions, independent approvals, consistent versions, deduplication, receipt, account revocation, reader signatures and preserved histories. Physical device behavior, multi-instance scaling, infrastructure security and availability remain release gates.

@@ -12,6 +12,7 @@ function checkDirectory(directory) {
     }
   }
 }
-for (const directory of ['src', 'scripts', 'tests', 'public']) checkDirectory(directory);
+for (const directory of ['src', 'scripts', 'tests', 'browser-tests', 'public'])
+  checkDirectory(directory);
 const result = spawnSync(process.execPath, ['--check', 'server.mjs'], { stdio: 'inherit' });
 process.exit(result.status || 0);

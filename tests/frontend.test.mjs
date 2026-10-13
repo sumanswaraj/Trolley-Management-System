@@ -5,12 +5,34 @@ import { loginView, workspaceView, fleetTable } from '../public/views.js';
 const state = {
   user: { id: 1, name: 'Test Admin', role: 'Admin' },
   locations: [{ id: 'STORE', name: 'Store', external: 0 }],
-  products: [], movements: [], audit: [], accounts: [],
-  trolleys: [{ id: '<script>alert(1)</script>', type: 'Component', capacity: 100, location: 'STORE', status: 'Available', qty: 0, batch: '' }],
+  products: [],
+  movements: [],
+  audit: [],
+  accounts: [],
+  trolleys: [
+    {
+      id: '<script>alert(1)</script>',
+      type: 'Component',
+      capacity: 100,
+      location: 'STORE',
+      status: 'Available',
+      qty: 0,
+      batch: '',
+    },
+  ],
 };
 
 test('all workspace views render and untrusted values are escaped', () => {
-  for (const page of ['dashboard', 'fleet', 'movement', 'approvals', 'history', 'masters', 'audit', 'users']) {
+  for (const page of [
+    'dashboard',
+    'fleet',
+    'movement',
+    'approvals',
+    'history',
+    'masters',
+    'audit',
+    'users',
+  ]) {
     const html = workspaceView(state, page);
     assert.ok(html.includes('<main>'));
     assert.ok(html.includes('aria-current="page"'));

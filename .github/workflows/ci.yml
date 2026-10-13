@@ -10,5 +10,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - run: npm ci --ignore-scripts
       - run: npm run check
+      - run: npm run format:check
       - run: npm test
+      - run: npm run test:hosted
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: docker build -t smart-trolley:ci .

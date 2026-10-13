@@ -1,0 +1,22 @@
+# Merge with compose.yaml: docker compose -f compose.yaml -f compose.production.yaml up --build -d
+services:
+  trolley:
+    environment:
+      SECURE_COOKIE: 'true'
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      TROLLEY_DOMAIN: ${TROLLEY_DOMAIN:?Set TROLLEY_DOMAIN to the confirmed DNS hostname}
+    volumes:
+      - ./deploy.Caddyfile:/etc/caddy/Caddyfile:ro
+      - proxy-data:/data
+      - proxy-config:/config
+    depends_on:
+      - trolley
+    restart: unless-stopped
+volumes:
+  proxy-data:
+  proxy-config:

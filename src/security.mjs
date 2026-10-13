@@ -1,7 +1,13 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { fail } from './errors.mjs';
 
-export const USER_ROLES = Object.freeze(['Admin', 'Supervisor', 'Operator', 'Quality User', 'Store User']);
+export const USER_ROLES = Object.freeze([
+  'Admin',
+  'Supervisor',
+  'Operator',
+  'Quality User',
+  'Store User',
+]);
 export const MANAGER_ROLES = Object.freeze(['Admin', 'Supervisor']);
 
 export function requireRole(user, allowedRoles) {
