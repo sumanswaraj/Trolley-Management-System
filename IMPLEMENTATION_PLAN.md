@@ -1,30 +1,28 @@
-# Implementation plan
+# Delivery status and enterprise release plan
 
-## Product workflow
+## Implemented in version 0.3
 
-Register trolley and label -> identify trolley -> validate load and destination -> request approval when required -> record departure -> confirm arrival -> release/return trolley. Track transit separately from arrival.
+- Responsive UI connected to shared API state; desktop sidebar and phone navigation.
+- Named users, salted password hashes, sessions, server roles, account deactivation and session revocation.
+- Persistent location/product/trolley masters and an empty-plant setup workflow.
+- Departure, approval/rejection and receipt with transactional history and audit writes.
+- Idempotency keys, stale-version checks, duplicate/open-movement prevention and no self-approval.
+- Overdue dashboard, fleet search and CSV movement export based on real database records.
+- Module boundaries, versioned SQL migrations, test scripts, CI workflow, Docker/Compose and Windows launcher.
+- Consistent online backup script and deployment/recovery documentation.
 
-## Proposed shared-system architecture
+## Next release: plant policy and scanning
 
-Preserve the uploaded interface; connect it to an API and a transactional database. Use authenticated users and enforce every role and approval rule on the server. Hardware events and manual scans must use the same movement validation service.
+Define product categories, compatible trolley types, capacity units, allowed routes and quality release rules from the actual plant. Apply these rules in the movement service; supervisor overrides must record a reason and approved exceptions. Add camera QR scanning with USB/manual fallback. Confirm RFID reader model, protocol and gate directions before implementing a signed device-ingestion API and offline replay protection.
 
-## Delivery sequence
+## Enterprise infrastructure release
 
-1. Baseline: preserve prototype, label sample data and document its limits.
-2. Foundation: database migrations, user login, permissions, trolley/location/product masters, empty-plant onboarding and separate demo data.
-3. Operations: movement API with transactional state changes, expected-state checks, idempotency keys and departure/arrival confirmation. Persist product, batch and quantity with each movement.
-4. Controls: server-enforced approvals, no self-approval, append-only movement/audit records, deactivation instead of deleting operational history, overdue rules and backup/restore.
-5. Scanning: USB scanner input first; camera QR scanning with manual fallback and duplicate-scan protection; RFID integration after reader protocol and gate locations are confirmed.
-6. Reporting: calculate utilization, movement counts and turnaround from real events; remove synthetic chart data; export filtered results.
-7. Pilot: test simultaneous operators, duplicate and delayed device events, interrupted connections, rejected approvals, arrival mismatches, restoration and phone layouts.
+Implement PostgreSQL and migration tests, paginated reads, complete period reporting, managed identity/SSO, password recovery, location-scoped roles, scalable sessions/rate limits, monitoring and disaster recovery automation. Test multi-client concurrency, load, security, migrations and backup restoration in the intended hosting environment before rollout. Preserve the frontend/service/repository boundaries while adding these capabilities.
 
-## Decisions before production integrations
+## Decisions still needed for physical deployment
 
-- Hosting: local plant server or cloud; available plant connectivity.
-- Identity: independent logins or company identity provider.
-- Hardware: QR-only first or RFID readers; reader model and interface.
-- Plant rules: locations, capacities, movement routes, return times and approver hierarchy.
+Hosting (plant server or cloud), company identity provider, reader models, plant layout, capacity units, route rules, approval hierarchy, retention and availability targets. These are not guessed or inferred from the prototype.
 
-## Completion criteria
+## Acceptance criteria
 
-Two users see the same persisted state; unauthorized requests are rejected by the API; retries do not create duplicate movements; departure and receipt are independently recorded; restart preserves records; audit history records actor, timestamp, previous state and resulting state; reports contain only recorded data.
+Two users see the same persisted state; unauthorized master/user/approval requests are denied by the API; movement retries do not duplicate history; stale commands return conflicts; departure and receipt are independently recorded; restart preserves records; account deactivation revokes sessions; history remains intact; reports contain recorded events only. Load, device and recovery evidence remains required for enterprise release.
