@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Trolley Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --font:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --bg:#F1F4F7;--card:#FFFFFF;--ink:#15202B;--ink2:#40536A;--mute:#6B7C8D;--line:#DAE1E8;--line2:#ECF0F4;
+  --accent:#0F5FA8;--accent-ink:#fff;--amber:#F2A900;--side:#101B26;--side-ink:#B9C6D3;--shadow:0 1px 2px rgba(16,27,38,.06),0 4px 14px rgba(16,27,38,.05);
+  --c-avail:#17855A;--c-use:#0F5FA8;--c-transit:#0A8499;--c-wait:#A96A00;--c-maint:#566677;--c-over:#C22B2B;--c-out:#7A3FC4;--c-off:#8795A3;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C131A;--card:#131D27;--ink:#E6ECF2;--ink2:#B3C0CD;--mute:#8596A7;--line:#263441;--line2:#1C2833;--accent:#5AA6EA;--accent-ink:#06121D;--side:#0A1118;--shadow:0 1px 2px rgba(0,0,0,.4);
+  --c-avail:#3DBE8B;--c-use:#5AA6EA;--c-transit:#34B8CE;--c-wait:#E0A93B;--c-maint:#93A3B3;--c-over:#F26B6B;--c-out:#B58AEA;--c-off:#8795A3}}
+:root[data-theme="dark"]{
+  --bg:#0C131A;--card:#131D27;--ink:#E6ECF2;--ink2:#B3C0CD;--mute:#8596A7;--line:#263441;--line2:#1C2833;--accent:#5AA6EA;--accent-ink:#06121D;--side:#0A1118;--shadow:0 1px 2px rgba(0,0,0,.4);
+  --c-avail:#3DBE8B;--c-use:#5AA6EA;--c-transit:#34B8CE;--c-wait:#E0A93B;--c-maint:#93A3B3;--c-over:#F26B6B;--c-out:#B58AEA;--c-off:#8795A3}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic.sm{width:14px;height:14px}.ic.lg{width:24px;height:24px}
+.mono{font-family:var(--mono)}
+.muted{color:var(--mute)}.small{font-size:12px}.right{text-align:right}.nowrap{white-space:nowrap}
+/* shell */
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+.side{position:fixed;left:0;top:0;bottom:0;width:248px;background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);z-index:40;transition:transform .2s}
+.brand{display:flex;gap:10px;align-items:center;padding:18px 16px 14px}
+.brand .mk{width:34px;height:34px;border-radius:9px;background:var(--amber);color:#1b1300;display:grid;place-items:center}
+.brand b{display:block;color:#fff;font-size:15px;line-height:1.1}.brand span{font-size:11.5px;color:#8FA1B3}
+.nav{padding:6px 10px;overflow:auto;flex:1}
+.nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:8px;color:var(--side-ink);text-decoration:none;position:relative;margin-bottom:1px;cursor:pointer}
+.nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav a.on{background:rgba(255,255,255,.09);color:#fff}
+.nav a.on::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--amber)}
+.nav .n{margin-left:auto;font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;background:#C22B2B;color:#fff}
+.nav .n.soft{background:rgba(255,255,255,.14)}
+.side-f{padding:12px 16px 16px;font-size:11.5px;color:#8FA1B3;border-top:1px solid rgba(255,255,255,.08)}
+.side-f .ok{display:flex;align-items:center;gap:7px;color:#cfe;margin-bottom:4px}
+.dotg{width:8px;height:8px;border-radius:50%;background:#3DBE8B;box-shadow:0 0 0 3px rgba(61,190,139,.2)}
+.main{grid-column:2;min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 22px}
+.gsearch{position:relative;flex:1;max-width:420px}
+.gsearch input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+.gsearch .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--mute)}
+.clock{font-size:12.5px;color:var(--ink2);text-align:right;line-height:1.2}.clock b{display:block;font-family:var(--mono);font-size:14px;color:var(--ink)}
+.iconbtn{position:relative;width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{background:var(--bg)}
+.iconbtn .cnt{position:absolute;top:-5px;right:-5px;background:#C22B2B;color:#fff;font-size:10.5px;font-weight:600;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+.user{display:flex;align-items:center;gap:10px;padding:4px 10px 4px 4px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer;text-align:left}
+.user .av{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:600;font-size:12px}
+.user b{display:block;font-size:13px;line-height:1.15}.user span{font-size:11.5px;color:var(--mute)}
+.pop{position:absolute;right:0;top:calc(100% + 8px);background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 36px rgba(10,20,30,.2);min-width:280px;z-index:60;padding:8px;display:none}
+.pop.show{display:block}.pop h4{font-size:12px;color:var(--mute);padding:6px 8px;font-weight:500}
+.pop .it{display:flex;gap:10px;align-items:center;width:100%;padding:8px;border:0;background:none;border-radius:8px;cursor:pointer;text-align:left}
+.pop .it:hover,.pop .it.on{background:var(--bg)}
+.pop .ni{padding:8px;border-radius:8px;display:flex;gap:9px;font-size:13px}.pop .ni.unread{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.rel{position:relative}
+.view{padding:22px;max-width:1500px;width:100%;margin:0 auto}
+.ph{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.ph h1{font-size:23px}.ph p{margin:3px 0 0;color:var(--mute);max-width:70ch}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.p:hover{filter:brightness(1.08)}
+.btn.d{background:var(--c-over);border-color:var(--c-over);color:#fff}
+.btn.g{background:color-mix(in srgb,var(--c-avail) 12%,transparent);border-color:color-mix(in srgb,var(--c-avail) 40%,transparent);color:var(--c-avail)}
+.btn.sm{min-height:30px;padding:0 10px;font-size:12.5px;border-radius:7px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.ch{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 0;flex-wrap:wrap}
+.ch h3{font-size:15px}.cb{padding:14px 16px 16px}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g21{grid-template-columns:2fr 1fr}.g12{grid-template-columns:1fr 2fr}
+.mt{margin-top:16px}
+/* workflow */
+.steps{display:flex;gap:0;margin-bottom:16px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.step{flex:1;min-width:128px;padding:11px 14px;border-right:1px solid var(--line2);cursor:pointer;position:relative}
+.step:last-child{border-right:0}.step:hover{background:var(--bg)}
+.step b{display:flex;align-items:center;gap:7px;font-size:13px}
+.step i{font-style:normal;width:20px;height:20px;border-radius:50%;background:var(--line);color:var(--ink2);font-size:11px;display:grid;place-items:center;font-weight:600}
+.step span{display:block;font-size:11.5px;color:var(--mute);margin-top:2px}
+.step.on{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.step.on i{background:var(--accent);color:var(--accent-ink)}
+.step.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--amber)}
+/* kpi */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{--c:var(--ink);text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi:hover{border-color:var(--c)}
+.kpi .t{display:flex;align-items:center;justify-content:space-between;color:var(--ink2);font-size:12.5px;font-weight:500}
+.kpi .t .ib{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent)}
+.kpi .v{font-size:30px;font-weight:600;line-height:1.1;margin:8px 0 6px;font-variant-numeric:tabular-nums}
+.kpi .bar{height:4px;border-radius:2px;background:var(--line2);overflow:hidden}.kpi .bar i{display:block;height:100%;background:var(--c)}
+.kpi .f{font-size:11.5px;color:var(--mute);margin-top:6px}
+.kpi.alert .v{color:var(--c-over)}
+/* badges */
+.bd{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:500;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent)}
+.bd::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.s-avail{--c:var(--c-avail)}.s-use{--c:var(--c-use)}.s-transit{--c:var(--c-transit)}.s-wait{--c:var(--c-wait)}.s-maint{--c:var(--c-maint)}.s-over{--c:var(--c-over)}.s-out{--c:var(--c-out)}.s-off{--c:var(--c-off)}
+.p-critical{--c:var(--c-over)}.p-high{--c:#D2601A}.p-medium{--c:var(--c-wait)}.p-low{--c:var(--c-maint)}
+.p-critical::before{border-radius:1px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-size:11.5px;background:var(--line2);color:var(--ink2);font-weight:500}
+.chip.w{background:color-mix(in srgb,var(--c-wait) 16%,transparent);color:var(--c-wait)}
+.chip.r{background:color-mix(in srgb,var(--c-over) 14%,transparent);color:var(--c-over)}
+.chip.g{background:color-mix(in srgb,var(--c-avail) 14%,transparent);color:var(--c-avail)}
+.tid{font-family:var(--mono);font-weight:600;color:var(--accent);cursor:pointer;background:none;border:0;padding:0}
+.tid:hover{text-decoration:underline}
+/* tables */
+.tw{overflow:auto;border-top:1px solid var(--line2);margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{position:sticky;top:0;background:var(--card);text-align:left;font-weight:500;color:var(--mute);font-size:12px;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1}
+td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tbody tr:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+tr.late td:first-child{box-shadow:inset 3px 0 0 var(--c-over)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px 0;align-items:center}
+.tools input,.tools select,.fld input,.fld select,.fld textarea{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 11px;min-height:38px;width:100%}
+.tools input,.tools select{width:auto;min-width:130px}.tools .grow{flex:1;min-width:180px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 16px;color:var(--mute);font-size:12.5px;flex-wrap:wrap}
+.empty{padding:34px 16px;text-align:center;color:var(--mute)}
+/* forms */
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.fgrid .full{grid-column:1/-1}
+.fld label{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:4px;font-weight:500}
+.fld .hint{font-size:11.5px;color:var(--mute);margin-top:3px}
+.fld input:disabled{background:var(--bg)}
+.err{color:var(--c-over);font-size:12.5px;margin-top:4px}
+/* trolley cards */
+.tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(262px,1fr));gap:12px;padding:14px 16px 4px}
+.tc{border:1px solid var(--line);border-radius:11px;padding:12px;background:var(--card);--c:var(--c-off);border-top:3px solid var(--c);cursor:pointer}
+.tc:hover{box-shadow:var(--shadow)}
+.tc .r1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tc .id{font-family:var(--mono);font-weight:600;font-size:16px}
+.tc dl{margin:9px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px}.tc dt{color:var(--mute)}.tc dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* flow diagram */
+.flow{display:flex;align-items:stretch;padding:16px}
+.fn{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--card);cursor:pointer;--c:var(--accent);position:relative}
+.fn:hover{border-color:var(--c)}
+.fn .n{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2);font-weight:500}
+.fn .n .ic{color:var(--c)}
+.fn .v{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:4px}
+.fn .s{font-size:11.5px;color:var(--mute)}
+.fn .lb{height:4px;border-radius:2px;background:var(--line2);margin-top:8px;overflow:hidden}.fn .lb i{display:block;height:100%;background:var(--c)}
+.fc{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--mute);position:relative}
+.fc::before{content:"";position:absolute;left:4px;right:12px;top:50%;border-top:2px dashed var(--line);animation:dash 1.2s linear infinite}
+.fc::after{content:"";position:absolute;right:6px;top:50%;margin-top:-5px;border:5px solid transparent;border-left:7px solid var(--line)}
+.fc span{position:relative;background:var(--card);padding:0 3px;margin-top:-26px;font-family:var(--mono);font-weight:500;color:var(--ink2)}
+@keyframes dash{to{transform:translateX(0)}}
+.side-nodes{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 16px 16px}
+.side-nodes .fn{border-style:dashed}
+/* plant map */
+.plant{display:grid;gap:10px;grid-template-columns:repeat(4,1fr);grid-template-areas:"store prod1 prod2 prod3" "store assy qual maint" "fg pack disp disp"}
+.room{border:1px solid var(--line);border-left:4px solid var(--rc,var(--c-avail));border-radius:10px;padding:11px 12px;background:var(--card);cursor:pointer;text-align:left;min-height:118px;display:block;width:100%}
+.room:hover{box-shadow:var(--shadow)}.room.sel{outline:2px solid var(--accent);outline-offset:1px}
+.room .code{font-family:var(--mono);font-size:11px;color:var(--mute)}.room b{display:block;font-size:13.5px}
+.room .ct{display:flex;gap:12px;font-size:12px;color:var(--ink2);margin:6px 0 8px}.room .ct strong{font-size:17px;font-variant-numeric:tabular-nums}
+.dots{display:flex;flex-wrap:wrap;gap:3px}.dot{width:9px;height:9px;border-radius:2px;background:var(--c)}
+.outside{margin-top:12px;border:2px dashed var(--c-out);border-radius:12px;padding:6px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:10px}.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--c)}
+/* timeline */
+.tl{position:relative;margin:4px 0 0 8px;padding-left:22px;border-left:2px solid var(--line)}
+.tl .ev{position:relative;padding:0 0 16px}.tl .ev::before{content:"";position:absolute;left:-30px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--card);border:2px solid var(--accent)}
+.tl .ev.now::before{background:var(--amber);border-color:var(--amber);box-shadow:0 0 0 4px color-mix(in srgb,var(--amber) 25%,transparent)}
+.tl .ev b{display:block}.tl .ev span{font-size:12px;color:var(--mute)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0}.kv dt{color:var(--mute)}.kv dd{margin:0;min-width:0}
+/* scan */
+.vf{aspect-ratio:4/3;background:#0B1219;border-radius:12px;position:relative;overflow:hidden;display:grid;place-items:center;color:#7F92A5}
+.vf .c{position:absolute;width:34px;height:34px;border:3px solid var(--amber)}
+.vf .c.a{left:18%;top:16%;border-right:0;border-bottom:0}.vf .c.b{right:18%;top:16%;border-left:0;border-bottom:0}.vf .c.c2{left:18%;bottom:16%;border-right:0;border-top:0}.vf .c.d{right:18%;bottom:16%;border-left:0;border-top:0}
+.vf .ln{position:absolute;left:18%;right:18%;height:2px;background:var(--amber);box-shadow:0 0 12px var(--amber);animation:scan 2.4s ease-in-out infinite alternate}
+@keyframes scan{from{top:18%}to{top:80%}}
+.vf p{margin:0;font-size:12.5px;text-align:center;padding:0 24px;position:relative;top:34%}
+.rfid{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px}
+.res{border:1px solid var(--line);border-radius:12px;--c:var(--accent);border-top:4px solid var(--c)}
+.big{font-family:var(--mono);font-size:26px;font-weight:600}
+.bigbtns{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.bigbtns .btn{min-height:50px;justify-content:center;font-size:15px}
+/* alerts */
+.warn{border:1.5px solid var(--c-over);background:color-mix(in srgb,var(--c-over) 8%,var(--card));border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.warn.amber{border-color:var(--c-wait);background:color-mix(in srgb,var(--c-wait) 9%,var(--card))}
+.warn .ic{color:var(--c-over);margin-top:2px}.warn.amber .ic{color:var(--c-wait)}
+.warn h4{font-size:15px}.warn p{margin:3px 0 0;color:var(--ink2)}
+.sum{display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px 0}
+.sum button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px;cursor:pointer;text-align:left;min-width:110px}
+.sum button.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
+.sum b{font-size:20px;display:block;line-height:1.1}
+/* approvals */
+.apc{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card);border-left:4px solid var(--c-wait)}
+.apc .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.route{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;font-weight:500}
+.route .ic{color:var(--mute)}
+/* reports */
+.rep{display:flex;flex-direction:column;gap:10px;padding:16px;height:100%}
+.rep .ib{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+.rep p{margin:0;color:var(--mute);font-size:12.5px;flex:1}
+.chartbox{position:relative;height:270px}
+/* modal / toast */
+.ovl{position:fixed;inset:0;background:rgba(9,16,23,.58);display:none;justify-content:center;align-items:flex-start;overflow:auto;padding:5vh 12px;z-index:80}
+.ovl.show{display:flex}
+.modal{background:var(--card);border-radius:14px;width:min(580px,100%);box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.modal.wide{width:min(980px,100%)}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}.mh h3{font-size:17px}
+.mb{padding:18px}.mf{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:100;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.3);display:flex;gap:10px;align-items:flex-start;font-size:13px;border-left:4px solid var(--c-avail)}
+.toast.warn2{border-left-color:var(--amber)}.toast.danger{border-left-color:#F26B6B}
+.qrbox{display:grid;place-items:center;padding:14px;background:#fff;border-radius:10px;border:1px solid var(--line);width:fit-content;color:#111}
+.tag{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:16px;align-items:center;background:var(--card)}
+.id-banner{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:16px;border-left:4px solid var(--amber)}
+.bnav,.qa{display:none}
+.scrim{display:none}
+@media (prefers-reduced-motion:reduce){.vf .ln,.fc::before{animation:none}}
+@media (max-width:1280px){.kpis{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:1100px){
+  .flow{flex-wrap:wrap;gap:10px}.fc{display:none}.fn{flex:1 1 150px}
+  .g21,.g12,.g3{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}.main{grid-column:1}
+  .side{transform:translateX(-100%);box-shadow:0 0 40px rgba(0,0,0,.4)}.side.open{transform:none}
+  .scrim.show{display:block;position:fixed;inset:0;background:rgba(9,16,23,.5);z-index:35}
+  .g2{grid-template-columns:1fr}.clock{display:none}
+}
+@media (max-width:760px){
+  .view{padding:14px 12px 96px}.top{padding:8px 12px}.kpis{grid-template-columns:repeat(2,1fr)}
+  .user div{display:none}.user{padding:4px}
+  .plant{grid-template-columns:repeat(2,1fr);grid-template-areas:none}.plant .room{grid-area:auto!important}
+  .fgrid{grid-template-columns:1fr}.side-nodes{grid-template-columns:1fr 1fr}
+  .btn{min-height:44px}.btn.sm{min-height:36px}.tools input,.tools select,.fld input,.fld select,.fld textarea{min-height:44px;font-size:16px}
+  .ph h1{font-size:20px}.steps .step span{display:none}.step{min-width:96px}
+  .qa{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+  .qa button{min-height:76px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+  .qa button.p{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .bnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);z-index:45;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .bnav button{border:0;background:none;padding:9px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--mute);cursor:pointer;position:relative}
+  .bnav button.on{color:var(--accent);font-weight:600}
+  .bnav .cnt{position:absolute;top:3px;left:56%;background:#C22B2B;color:#fff;border-radius:9px;font-size:10px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 3px}
+  .toasts{bottom:78px}.bigbtns{grid-template-columns:1fr}.tcards{grid-template-columns:1fr}.modal{margin:0}.ovl{padding:2vh 8px}
+  .vf{aspect-ratio:16/10}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+<symbol id="i-move" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-truck" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3"/><path d="M14 20h3"/><path d="M20 20h1"/></symbol>
+<symbol id="i-rfid" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+<symbol id="i-factory" viewBox="0 0 24 24"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-pkg" viewBox="0 0 24 24"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></symbol>
+</defs></svg>
+
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="Main navigation">
+    <div class="brand"><div class="mk"><svg class="ic lg"><use href="#i-cart"/></svg></div><div><b>Smart Trolley</b><span>Management System</span></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-f"><div class="ok"><i class="dotg"></i>Demo mode · RFID gates simulated</div>Proof of concept for Digitron Technologies</div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <div class="main">
+    <header class="top">
+      <button class="iconbtn" id="menuBtn" data-act="menu" aria-label="Open menu" style="display:none"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <div class="gsearch"><svg class="ic sm"><use href="#i-search"/></svg><input id="gs" placeholder="Find a trolley by ID, QR or RFID" aria-label="Find a trolley" autocomplete="off"></div>
+      <div style="flex:1"></div>
+      <div class="clock"><b id="clk">--:--</b><span id="clkd"></span></div>
+      <div class="rel"><button class="iconbtn" data-act="bell" aria-label="Notifications"><svg class="ic"><use href="#i-bell"/></svg><span class="cnt" id="bellCnt" hidden>0</span></button><div class="pop" id="bellPop"></div></div>
+      <div class="rel"><button class="user" data-act="userMenu" aria-label="Switch user"><span class="av" id="uav">AM</span><div><b id="uname">Arjun Mehta</b><span id="urole">Admin</span></div></button><div class="pop" id="userPop"></div></div>
+    </header>
+    <main class="view" id="view"></main>
+  </div>
+</div>
+<nav class="bnav" id="bnav" aria-label="Quick navigation"></nav>
+<div class="ovl" id="ovl" role="dialog" aria-modal="true"><div class="modal" id="modal"></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script>
+'use strict';
+/* ====================== DATA & BUSINESS LOGIC ====================== */
+const KEY='stms-poc-v1', ROLEKEY='stms-poc-role';
+const MIN=60000, HR=3600000, NOW=()=>Date.now();
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const LOCS=[
+ {id:'STORE-01',name:'Main Store',group:'Store',cap:40,icon:'store'},
+ {id:'PROD-L01',name:'Production Line 01',group:'Production',cap:20,icon:'factory'},
+ {id:'PROD-L02',name:'Production Line 02',group:'Production',cap:20,icon:'factory'},
+ {id:'PROD-L03',name:'Production Line 03',group:'Production',cap:20,icon:'factory'},
+ {id:'ASSY-01',name:'Assembly',group:'Assembly',cap:14,icon:'wrench'},
+ {id:'QUALITY-01',name:'Quality Inspection',group:'Quality',cap:14,icon:'shield'},
+ {id:'PACK-01',name:'Packing',group:'Packing',cap:14,icon:'pkg'},
+ {id:'FG-01',name:'Finished Goods',group:'Finished Goods',cap:16,icon:'box'},
+ {id:'DISPATCH-01',name:'Dispatch',group:'Dispatch',cap:12,icon:'truck'},
+ {id:'MAINT-01',name:'Maintenance',group:'Maintenance',cap:8,icon:'wrench'},
+ {id:'OUT-01',name:'Outside Plant',group:'Outside Plant',cap:24,icon:'pin'}
+];
+const LOC=Object.fromEntries(LOCS.map(l=>[l.id,l]));
+const grp=id=>LOC[id]?LOC[id].group:'';
+const lname=id=>LOC[id]?LOC[id].name:(id||'—');
+const GDEPT={'Store':'Stores','Production':'Production','Assembly':'Assembly','Quality':'Quality','Packing':'Packing','Finished Goods':'Stores','Dispatch':'Dispatch','Maintenance':'Maintenance','Outside Plant':'Logistics'};
+const DEPTS=['Stores','Production','Assembly','Quality','Packing','Dispatch','Maintenance','Logistics'];
+const STATUSES=['Available','In Use','In Transit','Waiting','Maintenance','Overdue','Outside Plant'];
+const SKEY={'Available':'avail','In Use':'use','In Transit':'transit','Waiting':'wait','Maintenance':'maint','Overdue':'over','Outside Plant':'out','Inactive':'off'};
+const MTYPES=['Transfer','Production Issue','Production Return','Quality Inspection','Quality Release','Packing','Dispatch','Store Transfer','Maintenance','Outside Plant'];
+const MDEFAULT={'Production Issue':['STORE-01','PROD-L01'],'Production Return':['PROD-L01','STORE-01'],'Quality Inspection':[null,'QUALITY-01'],'Quality Release':['QUALITY-01','PACK-01'],'Packing':[null,'PACK-01'],'Dispatch':[null,'DISPATCH-01'],'Store Transfer':[null,'STORE-01'],'Maintenance':[null,'MAINT-01'],'Outside Plant':[null,'OUT-01'],'Transfer':[null,null]};
+const TTYPES=['Material Trolley','Component Trolley','Finished Goods','WIP Trolley','Rework Trolley'];
+const TINFO={'Material Trolley':{cap:500,mat:'Raw Material'},'Component Trolley':{cap:350,mat:'Component'},'Finished Goods':{cap:600,mat:'Finished Goods'},'WIP Trolley':{cap:400,mat:'WIP'},'Rework Trolley':{cap:300,mat:'Rework'}};
+const ACCEPTS={'Material Trolley':['Raw','Component'],'Component Trolley':['Component','Raw'],'WIP Trolley':['WIP','Component'],'Finished Goods':['Finished','WIP'],'Rework Trolley':['Raw','Component','WIP','Finished']};
+const EXPMIN={'Production':240,'Assembly':180,'Quality':90,'Packing':120,'Dispatch':60,'Maintenance':480,'Outside Plant':1440,'Store':480,'Finished Goods':480};
+const OPS=['Rahul Kumar','Neha Sharma','Amit Verma','Priya Nair','Suresh Patil','Anita Desai','Vikram Singh','Deepak Rao','Meena Iyer','Karan Mehta'];
+const USERS={'Admin':'Arjun Mehta','Plant Manager':'Sunita Rao','Supervisor':'Ramesh Iyer','Operator':'Rahul Kumar','Quality User':'Neha Sharma','Store User':'Amit Verma'};
+const ALL_PAGES=['dashboard','master','scan','live','overdue','movement','locations','history','products','alerts','approvals','reports','analytics','settings'];
+const ROLES={
+ 'Admin':{pages:ALL_PAGES,perms:['master','movement','approve','alert','verify','reports','settings'],blurb:'Full access to every module, master data, approvals and settings.'},
+ 'Plant Manager':{pages:['dashboard','live','overdue','locations','history','products','alerts','approvals','reports','analytics'],perms:['approve','alert','reports'],blurb:'Dashboards, reports, movement monitoring and approvals.'},
+ 'Supervisor':{pages:['dashboard','master','scan','live','overdue','movement','locations','history','products','alerts','approvals'],perms:['movement','approve','alert','verify'],blurb:'Movement entry, trolley tracking, alerts and approvals.'},
+ 'Operator':{pages:['dashboard','scan','live','movement','history','alerts'],perms:['movement'],blurb:'Scan trolleys and record movements.'},
+ 'Quality User':{pages:['dashboard','scan','live','movement','products','history','alerts'],perms:['movement','verify','alert'],types:['Quality Inspection','Quality Release','Transfer'],blurb:'Quality inspection movements and product segregation.'},
+ 'Store User':{pages:['dashboard','master','scan','live','movement','history','products','alerts'],perms:['movement'],types:['Production Issue','Production Return','Store Transfer','Transfer'],blurb:'Issue and receive trolleys, inventory movement.'}
+};
+const PRODUCTS=[
+ {code:'RAW-S01',name:'Steel Bar Stock Ø40',cat:'Raw',uom:'kg',batch:'B2610-S21'},
+ {code:'CMP-A01',name:'Component A – Gear Blank',cat:'Component',uom:'pcs',batch:'B2610-A14'},
+ {code:'CMP-B02',name:'Component B – Shaft Sleeve',cat:'Component',uom:'pcs',batch:'B2610-B07'},
+ {code:'CMP-F05',name:'Fastener Kit FK-05',cat:'Component',uom:'kits',batch:'B2609-F32'},
+ {code:'WIP-G12',name:'Gearbox Sub-assembly',cat:'WIP',uom:'pcs',batch:'B2610-G03'},
+ {code:'ASM-A10',name:'Product A – Pump Housing',cat:'WIP',uom:'pcs',batch:'B2610-PA9'},
+ {code:'ASM-B20',name:'Product B – Valve Body',cat:'WIP',uom:'pcs',batch:'B2610-PB4'},
+ {code:'ASM-C30',name:'Product C – Motor Rotor',cat:'WIP',uom:'pcs',batch:'B2610-PC2'},
+ {code:'FIN-A40',name:'Finished Pump Unit PU-40',cat:'Finished',uom:'pcs',batch:'B2610-FA6'},
+ {code:'FIN-B50',name:'Finished Valve Unit VU-50',cat:'Finished',uom:'pcs',batch:'B2610-FB1'}
+];
+const ALLOWED={Raw:['Store','Production','Outside Plant'],Component:['Store','Production','Assembly','Quality','Outside Plant'],WIP:['Production','Assembly','Quality','Store','Outside Plant'],Finished:['Quality','Packing','Finished Goods','Dispatch','Outside Plant']};
+PRODUCTS.forEach(p=>p.allowed=ALLOWED[p.cat]);
+const PROD=Object.fromEntries(PRODUCTS.map(p=>[p.code,p]));
+const pname=c=>PROD[c]?PROD[c].name:(c||'—');
+const POOL={'Store':['RAW-S01','CMP-A01','CMP-B02','CMP-F05'],'Production':['CMP-A01','CMP-B02','WIP-G12','ASM-A10','ASM-B20','RAW-S01'],'Assembly':['CMP-A01','CMP-F05','ASM-A10','ASM-C30','WIP-G12'],'Quality':['ASM-A10','ASM-B20','ASM-C30','FIN-A40','FIN-B50'],'Packing':['FIN-A40','FIN-B50'],'Dispatch':['FIN-A40','FIN-B50'],'Outside Plant':['ASM-C30','CMP-A01','WIP-G12']};
+const TYPE_BY_CAT={Raw:'Material Trolley',Component:'Component Trolley',WIP:'WIP Trolley',Finished:'Finished Goods'};
+const PRED={'PROD-L01':'STORE-01','PROD-L02':'STORE-01','PROD-L03':'STORE-01','ASSY-01':'PROD-L01','QUALITY-01':'PROD-L02','PACK-01':'QUALITY-01','FG-01':'PACK-01','DISPATCH-01':'FG-01','OUT-01':'DISPATCH-01','MAINT-01':'PROD-L01','STORE-01':'PROD-L02'};
+
+let DB=null, ROLE='Admin', QUIET=false, onNotify=null;
+const me=()=>({name:USERS[ROLE],role:ROLE});
+const hasPerm=p=>ROLES[ROLE].perms.includes(p);
+const T=id=>DB.trolleys.find(t=>t.id===id);
+const pad3=n=>String(n).padStart(3,'0');
+
+function movementType(from,to){
+ const gt=grp(to),gf=grp(from);
+ if(gt==='Store') return gf==='Production'?'Production Return':'Store Transfer';
+ if(gf==='Quality'&&gt==='Packing') return 'Quality Release';
+ if(gt==='Production') return gf==='Store'?'Production Issue':'Transfer';
+ return {'Quality':'Quality Inspection','Packing':'Packing','Dispatch':'Dispatch','Maintenance':'Maintenance','Outside Plant':'Outside Plant'}[gt]||'Transfer';
+}
+function statusFor(to,qty){
+ const g=grp(to); if(g==='Maintenance')return 'Maintenance'; if(g==='Outside Plant')return 'Outside Plant';
+ if(!(qty>0))return 'Available'; return g==='Quality'?'Waiting':'In Use';
+}
+function expectedFor(to,status,ts){ if(status==='Available'||status==='In Transit')return null; const m=EXPMIN[grp(to)]; return m?ts+m*MIN:null; }
+function eff(t){
+ if(!t.active) return 'Inactive';
+ if(['In Use','Waiting','In Transit'].includes(t.status)&&t.expected&&NOW()>t.expected) return 'Overdue';
+ return t.status;
+}
+function counts(){
+ const c={total:0,avail:0,use:0,transit:0,wait:0,maint:0,over:0,out:0,prod:0,quality:0,store:0,dispatch:0};
+ DB.trolleys.forEach(t=>{ if(!t.active)return; c.total++; const e=eff(t);
+  if(e==='Available')c.avail++; else if(e==='In Use')c.use++; else if(e==='In Transit')c.transit++; else if(e==='Waiting')c.wait++; else if(e==='Maintenance')c.maint++; else if(e==='Overdue')c.over++; else if(e==='Outside Plant')c.out++;
+  const g=grp(t.loc); if(g==='Production')c.prod++; if(g==='Quality')c.quality++; if(g==='Store')c.store++; if(g==='Dispatch')c.dispatch++; });
+ return c;
+}
+function locStats(){
+ const s={}; LOCS.forEach(l=>s[l.id]={trolleys:0,units:0,list:[]});
+ DB.trolleys.forEach(t=>{ if(!t.active||!s[t.loc])return; s[t.loc].trolleys++; s[t.loc].units+=t.qty||0; s[t.loc].list.push(t); });
+ return s;
+}
+function flagsOf(t){
+ const f=[]; if(!t.active) return f; const p=t.product&&PROD[t.product];
+ if(p){ if(!ACCEPTS[t.type].includes(p.cat))f.push('Wrong trolley'); if(!p.allowed.includes(grp(t.loc)))f.push('Wrong location'); }
+ else if(['Production','Assembly'].includes(grp(t.loc))&&t.status==='In Use') f.push('Unassigned trolley');
+ (t.flags||[]).forEach(x=>f.push(x));
+ if(DB.alerts.some(a=>a.trolley===t.id&&a.status!=='Resolved'&&a.type==='Wrong product')) f.push('Wrong product');
+ return [...new Set(f)];
+}
+
+/* ---------- seed ---------- */
+function seed(){
+ const R=rng(2610), now=NOW();
+ const ri=(a,b)=>Math.floor(a+R()*(b-a+1)), pick=a=>a[Math.floor(R()*a.length)];
+ const PLAN=[[22,'STORE-01','Available'],[6,'STORE-01','In Transit','PROD-L02'],[11,'PROD-L01','In Use'],[1,'PROD-L01','In Transit','QUALITY-01'],[13,'PROD-L02','In Use'],[2,'PROD-L02','In Transit','QUALITY-01'],[9,'PROD-L03','In Use'],[1,'PROD-L03','In Transit','QUALITY-01'],[8,'ASSY-01','In Use'],[3,'QUALITY-01','In Use'],[4,'QUALITY-01','Waiting'],[3,'QUALITY-01','In Transit','PACK-01'],[4,'PACK-01','In Use'],[2,'PACK-01','Waiting'],[2,'PACK-01','Available'],[3,'PACK-01','In Transit','DISPATCH-01'],[11,'FG-01','Available'],[5,'DISPATCH-01','In Use'],[3,'DISPATCH-01','Available'],[2,'DISPATCH-01','In Transit','OUT-01'],[3,'MAINT-01','Maintenance'],[10,'OUT-01','Outside Plant']];
+ let slots=[]; PLAN.forEach(([n,loc,st,dest])=>{for(let i=0;i<n;i++)slots.push({loc,status:st,dest:dest||null})});
+ const HAND={1:{loc:'PROD-L02',status:'In Use',product:'CMP-A01',ago:[30,90]},2:{loc:'QUALITY-01',status:'Waiting',type:'Finished Goods',product:'FIN-A40'},3:{loc:'STORE-01',status:'Available',type:'Component Trolley'},
+  7:{loc:'OUT-01',status:'Outside Plant',product:'ASM-C30'},11:{loc:'MAINT-01',status:'Maintenance'},15:{loc:'STORE-01',status:'In Transit',dest:'PROD-L02',product:'CMP-B02'},
+  18:{loc:'PROD-L02',status:'In Use',product:'WIP-G12'},22:{loc:'PROD-L01',status:'In Use',product:'ASM-B20'},24:{loc:'PROD-L01',status:'In Use',product:'ASM-A10'},
+  29:{loc:'PROD-L01',status:'In Use',product:'FIN-A40'},33:{loc:'PACK-01',status:'In Use',product:'FIN-B50',type:'Component Trolley'},36:{loc:'PROD-L03',status:'In Use',product:'WIP-G12',flags:['Mixed batch']},
+  41:{loc:'ASSY-01',status:'In Use',noProduct:true},52:{loc:'FG-01',status:'Available',ago:[1560,1560]}};
+ const used=new Set(), bySlot={};
+ Object.keys(HAND).forEach(k=>{const h=HAND[k];const i=slots.findIndex((s,ix)=>!used.has(ix)&&s.loc===h.loc&&s.status===h.status&&(!h.dest||s.dest===h.dest));used.add(i);bySlot[k]=slots[i]});
+ let rest=slots.filter((s,i)=>!used.has(i)); for(let i=rest.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]]}
+ const trolleys=[]; let ri2=0;
+ for(let id=1;id<=128;id++){
+  const h=HAND[id]||{}, s=bySlot[id]||rest[ri2++]; const g=grp(s.loc);
+  const loaded=!['Available','Maintenance'].includes(s.status)&&!h.noProduct;
+  let prod=null,qty=0; if(loaded){prod=h.product||pick(POOL[g]||POOL['Production']); qty=ri(20,400);}
+  let type=h.type; if(!type){ if(prod)type=TYPE_BY_CAT[PROD[prod].cat]; else if(['FG-01','PACK-01','DISPATCH-01'].includes(s.loc))type='Finished Goods'; else if(s.loc==='STORE-01')type=pick(['Material Trolley','Component Trolley']); else type=pick(TTYPES); }
+  const area=type==='Material Trolley'||type==='Component Trolley'?'STORE-01':type==='WIP Trolley'?pick(['PROD-L01','PROD-L02','PROD-L03']):type==='Finished Goods'?pick(['PACK-01','FG-01']):'QUALITY-01';
+  const EXP=EXPMIN[g]||240; let lastMove,since,expected=null;
+  if(s.status==='Available'){lastMove=now-(h.ago?ri(h.ago[0],h.ago[1]):ri(15,720))*MIN;since=lastMove}
+  else if(s.status==='In Transit'){lastMove=now-ri(2,18)*MIN;since=lastMove;expected=lastMove+60*MIN}
+  else if(s.status==='Outside Plant'||s.status==='Maintenance'){since=now-ri(60,Math.min(EXP-60,s.status==='Maintenance'?400:1000))*MIN;lastMove=since;expected=since+EXP*MIN}
+  else {lastMove=now-(h.ago?ri(h.ago[0],h.ago[1]):ri(8,Math.floor(EXP*0.8)))*MIN;since=lastMove;expected=since+EXP*MIN}
+  trolleys.push({id:'TR-'+pad3(id),type,capacity:TINFO[type].cap,matType:TINFO[type].mat,dept:GDEPT[grp(area)],area,qr:'QR-TR-'+pad3(id),rfid:'RFID-'+(0x5A10C000+id*7919).toString(16).toUpperCase(),
+   loc:s.loc,prevLoc:PRED[s.loc]||'STORE-01',dest:s.dest,status:s.status,product:prod,batch:prod?PROD[prod].batch:'',qty,operator:OPS[(id*3+ri(0,9))%OPS.length],
+   created:now-ri(60,540)*86400000,lastMove,since,expected,active:true,uses:ri(40,320),flags:h.flags||[],tag:id%37===0?'RFID signal weak':id%53===0?'QR unreadable':'OK'});
+ }
+ // overdue picks
+ const prot=new Set([1,22,24,29,33,36,41]); const ovr={'PROD-L02':2,'PROD-L01':2,'ASSY-01':1,'PROD-L03':1};
+ const t18=trolleys[17]; t18.since=t18.lastMove=now-222*MIN; t18.expected=now-102*MIN; t18.operator='Rahul Kumar';
+ trolleys.forEach((t,i)=>{ if(i===17||prot.has(i+1))return; if(t.status==='In Use'&&ovr[t.loc]>0){ovr[t.loc]--; const g=grp(t.loc); const d=ri(20,150); t.expected=now-d*MIN; t.since=t.lastMove=t.expected-EXPMIN[g]*MIN+ri(0,30)*MIN;} });
+ trolleys[0].operator='Rahul Kumar'; trolleys[1].operator='Neha Sharma'; trolleys[21].operator='Rahul Kumar';
+ // history chains
+ const movements=[]; let mv=0;
+ const mkRec=(t,from,to,ts,status)=>({id:'MV-'+String(++mv).padStart(5,'0'),ts,trolley:t.id,from,to,product:t.product||'',qty:t.qty||0,operator:OPS[(parseInt(t.id.slice(3))+mv)%OPS.length],type:movementType(from,to),dept:GDEPT[grp(to)]||'Production',status,reason:'',remarks:'',approvedBy:''});
+ trolleys.forEach(t=>{
+  const n=parseInt(t.id.slice(3)); const hand=!!HAND[n]; const steps=hand?3:ri(0,2);
+  const endTs=t.lastMove; const origin=t.status==='In Transit'?t.loc:t.prevLoc; let path=[t.status==='In Transit'?t.loc:t.loc];
+  // build backwards list of locs
+  const back=[t.loc]; for(let i=0;i<steps+1;i++){const p=PRED[back[back.length-1]]; if(!p||back.filter(x=>x===p).length>=(hand?2:1))break; back.push(p);}
+  back.reverse(); let ts=endTs; const recs=[];
+  if(t.status==='In Transit'){ recs.push(mkRec(t,t.loc,t.dest,endTs,'In Transit')); ts=endTs-ri(40,90)*MIN; }
+  for(let i=back.length-1;i>0;i--){ const r=mkRec(t,back[i-1],back[i],t.status==='In Transit'?ts:(i===back.length-1?endTs:ts),'Completed'); recs.push(r); ts-=ri(45,100)*MIN; }
+  if(t.status!=='In Transit'&&recs.length) t.prevLoc=back[back.length-2]||t.prevLoc;
+  if(t.status==='In Transit'&&back.length>1){ t.prevLoc=back[back.length-2]; }
+  if(t.status==='In Transit'&&recs.length>1) t.since=recs[1].ts;
+  if(recs.length===0){ const r=mkRec(t,PRED[t.loc]||'STORE-01',t.loc,endTs,'Completed'); recs.push(r); }
+  if(t.status!=='In Transit') t.since=recs[0].ts>t.since?t.since:recs[0].ts;
+  recs.forEach(r=>{ r.product=r.ts>=endTs-1?t.product||'':r.product; movements.push(r); });
+ });
+ // fix earliest records to be loaded sensibly & reasons
+ const RS={'Production Issue':'Line replenishment','Production Return':'Return empty trolley','Quality Inspection':'In-process inspection','Quality Release':'Inspection passed','Packing':'Ready for packing','Dispatch':'Customer order dispatch','Store Transfer':'Return to store','Maintenance':'Scheduled service','Outside Plant':'Job work at vendor','Transfer':'Line balancing'};
+ movements.forEach(r=>{r.reason=RS[r.type]||''});
+ // pending approval records
+ const t22=trolleys[21], t24=trolleys[23];
+ const pend={id:'MV-'+String(++mv).padStart(5,'0'),ts:now-18*MIN,trolley:'TR-022',from:'PROD-L01',to:'OUT-01',product:t22.product,qty:t22.qty,operator:'Rahul Kumar',dept:'Production',type:'Outside Plant',status:'Pending Approval',reason:'Job work – surface treatment',remarks:'',approvedBy:''};
+ movements.push(pend);
+ movements.sort((a,b)=>b.ts-a.ts);
+ const seq={mv,al:2000,ap:1000,au:0,nf:0};
+ const approvals=[
+  {id:'AP-1001',type:'Outside plant movement',trolley:'TR-022',from:'PROD-L01',to:'OUT-01',requestedBy:'Rahul Kumar',requestedAt:now-18*MIN,status:'Pending',decidedBy:'',decidedAt:null,remarks:'Job work – surface treatment vendor',movementId:pend.id,payload:{trolley:'TR-022',type:'Outside Plant',from:'PROD-L01',to:'OUT-01',product:t22.product,qty:t22.qty,operator:'Rahul Kumar',dept:'Production',reason:'Job work – surface treatment',remarks:''}},
+  {id:'AP-1002',type:'Product mismatch',trolley:'TR-024',from:'PROD-L01',to:'PROD-L01',requestedBy:'Neha Sharma',requestedAt:now-9*MIN,status:'Pending',decidedBy:'',decidedAt:null,remarks:'Trolley TR-024 is assigned to Product A but Product B was scanned.',payload:null,issues:['Wrong product']},
+  {id:'AP-0998',type:'Outside plant movement',trolley:'TR-007',from:'DISPATCH-01',to:'OUT-01',requestedBy:'Amit Verma',requestedAt:now-20*HR,status:'Approved',decidedBy:'Ramesh Iyer',decidedAt:now-19.8*HR,remarks:'Vendor PO verified, gate pass issued',payload:null},
+  {id:'AP-0999',type:'Outside plant movement',trolley:'TR-031',from:'PROD-L02',to:'OUT-01',requestedBy:'Rahul Kumar',requestedAt:now-27*HR,status:'Rejected',decidedBy:'Ramesh Iyer',decidedAt:now-26.5*HR,remarks:'No gate pass raised',payload:null},
+  {id:'AP-0997',type:'Wrong location',trolley:'TR-045',from:'PACK-01',to:'PROD-L03',requestedBy:'Priya Nair',requestedAt:now-30*HR,status:'Correction Requested',decidedBy:'Ramesh Iyer',decidedAt:now-29*HR,remarks:'Scan the source location again before resubmitting',payload:null}];
+ const A=(type,trolley,loc,ago,priority,status,msg,extra)=>({id:'AL-'+(++seq.al),type,trolley,loc,ts:now-ago*MIN,priority,status,msg,...extra});
+ const alerts=[
+  A('Wrong product','TR-024','PROD-L01',9,'Critical','Open','Product B was scanned on a trolley assigned to Product A'),
+  A('Trolley missing','TR-052','FG-01',46,'High','Open','Not scanned for 26 hours and not at its assigned area'),
+  A('Unauthorized movement','TR-029','PROD-L01',74,'High','Open','Finished unit trolley left Packing without a recorded movement'),
+  A('Wrong location','TR-045','PACK-01',29*60,'Medium','Acknowledged','Scanned at Packing; movement plan expected Production Line 03',{ackBy:'Ramesh Iyer'}),
+  A('Outside plant','TR-007','OUT-01',19*60,'Medium','Open','Trolley outside the plant for 19 hours; return due in 5 hours'),
+  A('Movement not completed','TR-015','STORE-01',34,'Medium','Open','Transit to Production Line 02 has not been received'),
+  A('Trolley maintenance due','TR-011','MAINT-01',180,'Low','Open','Scheduled wheel and brake service is due'),
+  A('Wrong location','TR-003','STORE-01',28*60,'Medium','Resolved','Scanned at Quality instead of Store',{resolvedBy:'Ramesh Iyer',resolvedAt:now-26*HR}),
+  A('Wrong product','TR-036','PROD-L03',50*60,'High','Resolved','Mixed batch detected on trolley; load separated',{resolvedBy:'Neha Sharma',resolvedAt:now-47*HR})];
+ const db={v:1,trolleys,movements,alerts,approvals,audit:[],notifs:[],settings:{outsideApproval:true,mismatchApproval:true},seq};
+ return db;
+}
+function seedFinish(){
+ QUIET=true; syncAlerts(); QUIET=false;
+ // audit from recent movements
+ DB.movements.filter(r=>r.status!=='Pending Approval').slice(0,26).forEach(r=>{DB.audit.push({id:'AU-'+(++DB.seq.au),ts:r.ts,user:r.operator,role:'Operator',action:r.status==='In Transit'?'Moved (in transit)':'Location changed',trolley:r.trolley,prev:lname(r.from),next:lname(r.to)})});
+ DB.audit.push({id:'AU-'+(++DB.seq.au),ts:NOW()-9*MIN,user:'Neha Sharma',role:'Quality User',action:'Product mismatch flagged',trolley:'TR-024',prev:'Product A',next:'Product B scanned'});
+ DB.audit.push({id:'AU-'+(++DB.seq.au),ts:NOW()-18*MIN,user:'Rahul Kumar',role:'Operator',action:'Approval requested',trolley:'TR-022',prev:'Production Line 01',next:'Outside Plant'});
+ DB.audit.sort((a,b)=>b.ts-a.ts);
+ DB.alerts.filter(a=>a.status==='Open').sort((a,b)=>b.ts-a.ts).slice(0,6).reverse().forEach(a=>DB.notifs.unshift({id:++DB.seq.nf,ts:a.ts,text:`${a.type}: ${a.trolley} — ${a.msg}`,level:a.priority==='Critical'||a.priority==='High'?'danger':'warn',read:false}));
+}
+
+/* ---------- persistence ---------- */
+let MEM=null;
+function load(){try{const s=localStorage.getItem(KEY);if(s){const d=JSON.parse(s);if(d&&d.v===1)return d}}catch(e){} return MEM}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){MEM=DB}}
+function initDB(reset){ let d=reset?null:load(); if(!d){DB=seed();seedFinish();} else DB=d; try{const r=localStorage.getItem(ROLEKEY);if(r&&ROLES[r])ROLE=r}catch(e){} syncAlerts(); save(); }
+
+/* ---------- audit / alerts / notifications ---------- */
+function logAudit(action,trolley,prev,next){DB.audit.unshift({id:'AU-'+(++DB.seq.au),ts:NOW(),user:me().name,role:ROLE,action,trolley:trolley||'',prev:prev==null?'':prev,next:next==null?'':next}); if(DB.audit.length>700)DB.audit.length=700}
+function notify(text,level){ DB.notifs.unshift({id:++DB.seq.nf,ts:NOW(),text,level:level||'info',read:false}); if(DB.notifs.length>60)DB.notifs.length=60; if(!QUIET&&onNotify)onNotify(text,level||'info'); }
+function raiseAlert(a){
+ if(DB.alerts.some(x=>x.status!=='Resolved'&&x.type===a.type&&x.trolley===a.trolley)) return null;
+ const al={id:'AL-'+(++DB.seq.al),ts:NOW(),status:'Open',...a}; DB.alerts.unshift(al);
+ notify(`${a.type}: ${a.trolley} — ${a.msg}`,['Critical','High'].includes(a.priority)?'danger':'warn'); logAudit('Alert raised',a.trolley,'',a.type); return al;
+}
+function syncAlerts(){
+ const now=NOW();
+ DB.trolleys.forEach(t=>{ if(!t.active)return; const e=eff(t);
+  const open=DB.alerts.find(a=>a.type==='Trolley overdue'&&a.trolley===t.id&&a.status!=='Resolved');
+  if(e==='Overdue'){ const d=now-t.expected, pr=d>2*HR?'Critical':d>HR?'High':'Medium';
+   if(!open) raiseAlert({type:'Trolley overdue',trolley:t.id,loc:t.loc,priority:pr,ts:t.expected,msg:`Past expected return time at ${lname(t.loc)}`}); else open.priority=pr;
+  } else if(open){ open.status='Resolved'; open.resolvedBy='System'; open.resolvedAt=now; }
+ });
+}
+function resolveAlertsFor(trolley,types,by){ DB.alerts.forEach(a=>{ if(a.trolley===trolley&&a.status!=='Resolved'&&types.includes(a.type)){a.status='Resolved';a.resolvedBy=by||me().name;a.resolvedAt=NOW();} }); }
+
+/* ---------- movements ---------- */
+function validateMove(m){
+ const t=T(m.trolley), issues=[];
+ if(!t) return {fatal:`Trolley ${m.trolley||''} is not registered. Check the ID or add it in Trolley Master.`};
+ if(!t.active) return {fatal:`${t.id} is deactivated. Reactivate it in Trolley Master before moving it.`};
+ if(!m.from||!m.to) return {fatal:'Choose both a From and a To location.'};
+ if(m.from===m.to) return {fatal:'From and To location are the same. Choose a different destination.'};
+ if(t.status==='In Transit'&&!m.receive) return {fatal:`${t.id} is already in transit to ${lname(t.dest)}. Receive it first.`};
+ if(m.from!==t.loc) issues.push({kind:'Wrong location',msg:`System shows ${t.id} at ${lname(t.loc)}, but this movement starts from ${lname(m.from)}.`});
+ const prod=m.product||t.product, qty=+m.qty||0;
+ if(t.product&&m.product&&t.product!==m.product&&qty>0) issues.push({kind:'Wrong product',msg:`${t.id} is assigned to ${pname(t.product)} but ${pname(m.product)} was entered.`});
+ if(qty>0&&!prod) issues.push({kind:'Unassigned trolley',msg:`${t.id} has a quantity but no product. Select the product it carries.`});
+ if(prod&&qty>0&&PROD[prod]){ const p=PROD[prod];
+  if(!p.allowed.includes(grp(m.to))) issues.push({kind:'Wrong location',msg:`${p.name} is not normally held at ${lname(m.to)}.`});
+  if(!ACCEPTS[t.type].includes(p.cat)) issues.push({kind:'Wrong trolley',msg:`${t.type} is not meant for ${p.cat.toLowerCase()} items.`}); }
+ return {issues};
+}
+function applyMovement(m,meta){
+ meta=meta||{}; const t=T(m.trolley), ts=m.ts||NOW(), oldLoc=t.loc, oldStatus=eff(t);
+ const rec={id:'MV-'+String(++DB.seq.mv).padStart(5,'0'),ts,trolley:t.id,from:m.from,to:m.to,product:(+m.qty>0?(m.product||t.product):'')||'',qty:+m.qty||0,operator:m.operator,type:m.type,dept:m.dept,status:m.transit?'In Transit':'Completed',reason:m.reason||'',remarks:m.remarks||'',approvedBy:meta.approvedBy||''};
+ if(m.transit){ t.status='In Transit'; t.dest=m.to; t.expected=ts+60*MIN; t.since=ts; }
+ else { t.prevLoc=oldLoc; t.loc=m.to; t.dest=null; t.since=ts;
+  if(+m.qty>0){ t.product=m.product||t.product; t.batch=PROD[t.product]?PROD[t.product].batch:''; t.qty=+m.qty; } else { t.product=null; t.batch=''; t.qty=0; t.flags=[]; }
+  t.status=m.statusAfter&&m.statusAfter!=='auto'?m.statusAfter:statusFor(m.to,t.qty); t.expected=expectedFor(m.to,t.status,ts); }
+ t.lastMove=ts; t.operator=m.operator; t.uses=(t.uses||0)+1; DB.movements.unshift(rec);
+ logAudit(m.transit?'Moved (in transit)':'Location changed',t.id,lname(oldLoc),lname(m.to));
+ if(!m.transit&&oldStatus!==t.status) logAudit('Status changed',t.id,oldStatus,t.status);
+ const g=grp(m.to); if(!m.transit&&g==='Outside Plant') notify(`${t.id} left the plant — now at ${lname(m.to)}`,'warn'); if(!m.transit&&g==='Maintenance') notify(`${t.id} sent to Maintenance`,'info');
+ resolveAlertsFor(t.id,['Wrong location','Unauthorized movement','Trolley missing','Movement not completed'],me().name);
+ syncAlerts(); save(); return rec;
+}
+function submitMovement(m,opts){
+ opts=opts||{}; const v=validateMove(m); if(v.fatal) return {ok:false,error:v.fatal};
+ const approver=hasPerm('approve'), issues=v.issues;
+ const needOutside=DB.settings.outsideApproval&&grp(m.to)==='Outside Plant'&&!approver;
+ const needIssue=DB.settings.mismatchApproval&&issues.length>0&&!(opts.override&&approver);
+ if(needOutside||needIssue){
+  const reasons=issues.map(i=>i.kind); if(needOutside)reasons.unshift('Outside plant');
+  const pend={id:'MV-'+String(++DB.seq.mv).padStart(5,'0'),ts:m.ts||NOW(),trolley:m.trolley,from:m.from,to:m.to,product:m.product||'',qty:+m.qty||0,operator:m.operator,type:m.type,dept:m.dept,status:'Pending Approval',reason:m.reason||'',remarks:m.remarks||'',approvedBy:''};
+  DB.movements.unshift(pend);
+  const ap={id:'AP-'+(++DB.seq.ap),type:needOutside&&!issues.length?'Outside plant movement':(issues[0]?issues[0].kind:'Outside plant movement'),trolley:m.trolley,from:m.from,to:m.to,requestedBy:m.operator,requestedAt:NOW(),status:'Pending',decidedBy:'',decidedAt:null,remarks:m.remarks||m.reason||issues.map(i=>i.msg).join(' '),movementId:pend.id,payload:{...m},issues:reasons};
+  DB.approvals.unshift(ap);
+  issues.forEach(i=>{ const type=i.kind==='Wrong location'?'Wrong location':'Wrong product'; raiseAlert({type,trolley:m.trolley,loc:T(m.trolley).loc,priority:type==='Wrong product'?'Critical':'High',msg:i.msg}); });
+  logAudit('Approval requested',m.trolley,lname(m.from),lname(m.to)); notify(`Approval needed: ${m.trolley} ${lname(m.from)} → ${lname(m.to)}`,'warn');
+  syncAlerts(); save(); return {ok:true,pending:true,approval:ap,issues};
+ }
+ const rec=applyMovement(m,{approvedBy:opts.override&&issues.length?me().name:''});
+ if(opts.override&&issues.length) logAudit('Supervisor override',m.trolley,issues.map(i=>i.kind).join(', '),'Approved');
+ return {ok:true,movement:rec,issues};
+}
+function receiveTrolley(id,operator){
+ const t=T(id); if(!t||t.status!=='In Transit'||!t.dest) return {ok:false};
+ const to=t.dest, from=t.loc, now=NOW(); const r=DB.movements.find(x=>x.trolley===id&&x.status==='In Transit'); if(r){r.status='Completed';r.receivedBy=operator;}
+ t.prevLoc=from; t.loc=to; t.dest=null; t.status=statusFor(to,t.qty); t.since=now; t.lastMove=now; t.operator=operator; t.expected=expectedFor(to,t.status,now);
+ logAudit('Trolley received',id,lname(from),lname(to)); resolveAlertsFor(id,['Movement not completed'],me().name); syncAlerts(); save(); return {ok:true,to};
+}
+function decideApproval(id,decision,remarks){
+ const a=DB.approvals.find(x=>x.id===id); if(!a||a.status!=='Pending') return {ok:false};
+ a.status={approve:'Approved',reject:'Rejected',correct:'Correction Requested'}[decision]; a.decidedBy=me().name; a.decidedAt=NOW(); if(remarks)a.remarks=remarks;
+ const pend=a.movementId&&DB.movements.find(r=>r.id===a.movementId);
+ if(decision==='approve'){ if(a.payload&&T(a.trolley)){ DB.movements=DB.movements.filter(r=>r!==pend); const t=T(a.trolley); const p={...a.payload,from:t.loc,ts:NOW()}; if(t.status==='In Transit')p.transit=false; applyMovement(p,{approvedBy:me().name}); } resolveAlertsFor(a.trolley,['Wrong product','Wrong location'],me().name); }
+ else if(pend){ pend.status=decision==='reject'?'Rejected':'Correction Requested'; }
+ logAudit('Approval '+a.status.toLowerCase(),a.trolley,'Pending',a.status); notify(`${a.trolley}: request ${a.status.toLowerCase()} by ${me().name}`,decision==='approve'?'info':'warn');
+ syncAlerts(); save(); return {ok:true,approval:a};
+}
+function verifyScan(trolleyId,productCode){
+ const t=T(trolleyId); if(!t) return {ok:false,error:`Trolley ${trolleyId} is not registered.`};
+ const issues=[]; if(t.product&&productCode!==t.product) issues.push({kind:'Wrong product',msg:`Trolley ${t.id} is assigned to ${pname(t.product)} but ${pname(productCode)} was scanned.`});
+ else if(!t.product) issues.push({kind:'Unassigned trolley',msg:`Trolley ${t.id} has no product assigned. Assign ${pname(productCode)} by recording a movement with a quantity.`});
+ const p=PROD[productCode]; if(p&&!ACCEPTS[t.type].includes(p.cat)) issues.push({kind:'Wrong trolley',msg:`${t.type} is not meant for ${p.cat.toLowerCase()} items.`});
+ if(p&&!p.allowed.includes(grp(t.loc))) issues.push({kind:'Wrong location',msg:`${p.name} is not normally held at ${lname(t.loc)}.`});
+ return {ok:!issues.length,issues,trolley:t};
+}
+function lookup(code){
+ const q=String(code||'').trim().toUpperCase(); if(!q) return null;
+ let t=DB.trolleys.find(x=>x.id===q||x.qr.toUpperCase()===q||x.rfid.toUpperCase()===q); if(t)return t;
+ const m=q.match(/(\d{1,4})$/); if(m){ t=T('TR-'+pad3(+m[1])); if(t)return t; } return null;
+}
+function movesIn24h(){ const c=NOW()-24*HR; return DB.movements.filter(r=>r.ts>=c&&r.status!=='Pending Approval'&&r.status!=='Rejected'); }
+/* ====================== UI CORE ====================== */
+const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>[...(r||document).querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ico=(n,c)=>`<svg class="ic ${c||''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const tm=ts=>new Date(ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+const dt=ts=>new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+const dtm=ts=>dt(ts)+', '+tm(ts);
+function dur(ms){ms=Math.max(0,ms);const m=Math.floor(ms/MIN);if(m<1)return'<1m';if(m<60)return m+'m';const h=Math.floor(m/60);if(h<24)return h+'h '+(m%60)+'m';return Math.floor(h/24)+'d '+(h%24)+'h'}
+const ago=ts=>dur(NOW()-ts)+' ago';
+const badge=s=>`<span class="bd s-${SKEY[s]||'off'}">${esc(s)}</span>`;
+const prBadge=p=>`<span class="bd p-${String(p).toLowerCase()}">${esc(p)}</span>`;
+const tid=id=>`<button class="tid" data-act="open" data-id="${esc(id)}">${esc(id)}</button>`;
+const flagChips=t=>flagsOf(t).map(f=>`<span class="chip ${f==='Mixed batch'||f==='Unassigned trolley'?'w':'r'}">${ico('warn','sm')}${esc(f)}</span>`).join(' ');
+const locOpts=(sel,blank)=>(blank?`<option value="">${blank}</option>`:'')+LOCS.map(l=>`<option value="${l.id}" ${l.id===sel?'selected':''}>${l.id} · ${l.name}</option>`).join('');
+const prodOpts=(sel,blank)=>(blank?`<option value="">${blank}</option>`:'')+PRODUCTS.map(p=>`<option value="${p.code}" ${p.code===sel?'selected':''}>${p.code} · ${p.name}</option>`).join('');
+const STEPS=[['Identify','Scan QR or RFID','scan'],['Locate','Current plant location','locations'],['Move','Record the movement','movement'],['Verify','Product, trolley, destination','products'],['Notify','Alerts on exceptions','alerts'],['Trace','Full movement history','history'],['Report','Dashboards and exports','reports']];
+const flow=(on)=>`<div class="steps" role="list" aria-label="Operating workflow">${STEPS.map((s,i)=>`<div class="step ${on&&on.includes(i)?'on':''}" role="listitem" data-act="go" data-p="${s[2]}"><b><i>${i+1}</i>${s[0]}</b><span>${s[1]}</span></div>`).join('')}</div>`;
+const pager=(total,page,size,k)=>{const pages=Math.max(1,Math.ceil(total/size));return `<div class="pager"><span>${total?`Showing ${(page-1)*size+1}–${Math.min(total,page*size)} of ${total}`:'No records'}</span><span class="acts"><button class="btn sm" data-act="page" data-k="${k}" data-d="-1" ${page<=1?'disabled':''}>Previous</button><span style="align-self:center">Page ${page} of ${pages}</span><button class="btn sm" data-act="page" data-k="${k}" data-d="1" ${page>=pages?'disabled':''}>Next</button></span></div>`};
+const empty=(t,d)=>`<div class="empty"><b style="color:var(--ink)">${t}</b><div>${d||''}</div></div>`;
+
+/* QR */
+function qrSvg(text,px){
+ let n=0,dark=null;
+ try{ if(typeof qrcode==='function'){const q=qrcode(0,'M');q.addData(text);q.make();n=q.getModuleCount();dark=(r,c)=>q.isDark(r,c);} }catch(e){n=0}
+ if(!n){ n=25; let h=0; for(const ch of text)h=(h*31+ch.charCodeAt(0))|0; const R=rng(h), grid=[];
+  for(let r=0;r<n;r++){grid[r]=[];for(let c=0;c<n;c++)grid[r][c]=R()>.5}
+  const fin=(r0,c0,r,c)=>{const a=r-r0,b=c-c0;if(a<-1||a>7||b<-1||b>7)return null;if(a<0||a>6||b<0||b>6)return false;return a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4)};
+  dark=(r,c)=>{for(const [r0,c0] of [[0,0],[0,n-7],[n-7,0]]){const f=fin(r0,c0,r,c);if(f!==null)return f}return grid[r][c]}; }
+ const q=2, N=n+q*2; let d=''; for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(dark(r,c))d+=`M${c+q} ${r+q}h1v1h-1z`;
+ return `<svg viewBox="0 0 ${N} ${N}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="QR code ${esc(text)}"><rect width="${N}" height="${N}" fill="#fff"/><path d="${d}" fill="#111"/></svg>`;
+}
+
+/* UI state */
+const UI={live:{q:'',status:'',loc:'',grp:'',type:'',view:'cards',page:1},master:{q:'',type:'',status:'',dept:'',page:1},
+ hist:{q:'',from:'',to:'',trolley:'',loc:'',operator:'',product:'',type:'',status:'',page:1,filters:true},
+ alerts:{status:'',priority:'',type:'',page:1},prod:{q:'',flag:'',page:1},loc:{sel:null},scan:{res:null,recent:[],input:''},mv:{pre:null,last:null},rep:null};
+let CUR='dashboard'; const PAGES={}, AFTER={}, REFRESH={}, ACT={}; let IGN=false;
+const CHARTS={};
+const allowed=p=>ROLES[ROLE].pages.includes(p);
+
+/* modal */
+function openModal(title,body,foot,wide){
+ $('#modal').className='modal'+(wide?' wide':'');
+ $('#modal').innerHTML=`<div class="mh"><h3>${title}</h3><button class="iconbtn" data-act="closeModal" aria-label="Close">${ico('x')}</button></div><div class="mb">${body}</div>${foot?`<div class="mf">${foot}</div>`:''}`;
+ $('#ovl').classList.add('show'); const f=$('#modal input:not([type=hidden]),#modal select,#modal textarea'); if(f&&!wide)setTimeout(()=>f.focus(),30);
+}
+function closeModal(){ $('#ovl').classList.remove('show'); $('#modal').innerHTML=''; }
+const modalOpen=()=>$('#ovl').classList.contains('show');
+function toast(msg,level){ const el=document.createElement('div'); el.className='toast '+(level==='danger'?'danger':level==='warn'?'warn2':''); el.innerHTML=`${ico(level==='danger'||level==='warn'?'warn':'check')}<div>${esc(msg)}</div>`; $('#toasts').appendChild(el); setTimeout(()=>el.remove(),4600); }
+onNotify=(t,l)=>toast(t,l==='info'?'':l);
+
+/* file saving */
+async function saveFile(filename,data,mime){
+ try{ if(window.claude&&claude.use){ const d=await claude.use('downloads'); if(d){ await d.save({filename,data}); return true; } } }catch(e){ if(e&&e.code==='declined')return false; }
+ try{ const b=new Blob([data],{type:mime||'application/octet-stream'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); return true; }catch(e){ toast('Download is not available in this view.','warn'); return false; }
+}
+async function exportXlsx(name,cols,rows){
+ if(typeof XLSX==='undefined'){ const csv=[cols,...rows].map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n'); if(await saveFile(name+'.csv',csv,'text/csv'))toast('Excel library unavailable offline — saved as CSV.','warn'); return; }
+ const ws=XLSX.utils.aoa_to_sheet([cols,...rows]); ws['!cols']=cols.map((c,i)=>({wch:Math.min(34,Math.max(String(c).length+2,...rows.slice(0,60).map(r=>String(r[i]==null?'':r[i]).length+2)))})); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Report');
+ const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'}); if(await saveFile(name+'.xlsx',buf))toast('Excel report ready: '+name+'.xlsx');
+}
+async function exportPdf(name,title,cols,rows){
+ const J=window.jspdf&&window.jspdf.jsPDF;
+ if(!J){ const html=`<!doctype html><meta charset="utf-8"><title>${esc(title)}</title><style>body{font:13px sans-serif;margin:24px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:5px 8px;text-align:left}</style><h2>${esc(title)}</h2><table><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</table>`; if(await saveFile(name+'.html',html,'text/html'))toast('PDF library unavailable — saved as a printable HTML file.','warn'); return; }
+ const doc=new J({orientation:cols.length>6?'landscape':'portrait',unit:'pt',format:'a4'}); doc.setFontSize(15); doc.text('Smart Trolley Management System',40,40); doc.setFontSize(11); doc.setTextColor(90); doc.text(`${title}  |  Generated ${dtm(NOW())} by ${me().name}`,40,58);
+ if(doc.autoTable) doc.autoTable({head:[cols],body:rows.map(r=>r.map(v=>v==null?'':String(v))),startY:72,styles:{fontSize:8,cellPadding:4},headStyles:{fillColor:[15,95,168]},margin:{left:40,right:40}});
+ else rows.slice(0,40).forEach((r,i)=>doc.text(r.join('  '),40,84+i*14));
+ if(await saveFile(name+'.pdf',doc.output('arraybuffer')))toast('PDF report ready: '+name+'.pdf');
+}
+
+/* chrome */
+function openCounts(){ return {alerts:DB.alerts.filter(a=>a.status!=='Resolved').length,appr:DB.approvals.filter(a=>a.status==='Pending').length,over:counts().over}; }
+const NAV=[['dashboard','Dashboard','grid'],['master','Trolley Master','cart'],['scan','Scan Trolley','scan'],['live','Live Tracking','activity'],['overdue','Overdue Trolleys','clock'],['movement','Movement','move'],['locations','Locations','pin'],['history','Movement History','history'],['products','Products & Materials','box'],['alerts','Alerts','bell'],['approvals','Approvals','check'],['reports','Reports','file'],['analytics','Analytics','chart'],['settings','Settings','sliders']];
+function chrome(){
+ const oc=openCounts(), b={alerts:oc.alerts,approvals:oc.appr,overdue:oc.over};
+ $('#nav').innerHTML=NAV.filter(n=>allowed(n[0])).map(n=>`<a data-act="go" data-p="${n[0]}" class="${CUR===n[0]?'on':''}" role="link" tabindex="0">${ico(n[2])}<span>${n[1]}</span>${b[n[0]]?`<span class="n ${n[0]==='approvals'?'soft':''}">${b[n[0]]}</span>`:''}</a>`).join('');
+ const bn=[['dashboard','Home','grid'],['scan','Scan','scan'],['movement','Move','move'],['alerts','Alerts','bell']].filter(x=>allowed(x[0]));
+ $('#bnav').style.gridTemplateColumns=`repeat(${bn.length+1},1fr)`;
+ $('#bnav').innerHTML=bn.map(x=>`<button data-act="go" data-p="${x[0]}" class="${CUR===x[0]?'on':''}">${ico(x[2])}${x[1]}${x[0]==='alerts'&&oc.alerts?`<span class="cnt">${oc.alerts}</span>`:''}</button>`).join('')+`<button data-act="menu">${ico('menu')}More</button>`;
+ const u=me(); $('#uname').textContent=u.name; $('#urole').textContent=u.role; $('#uav').textContent=u.name.split(' ').map(x=>x[0]).join('');
+ const unread=DB.notifs.filter(n=>!n.read).length; const bc=$('#bellCnt'); bc.hidden=!unread; bc.textContent=unread>9?'9+':unread;
+ const d=new Date(); $('#clk').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); $('#clkd').textContent=dt(d);
+ $('#menuBtn').style.display=matchMedia('(max-width:900px)').matches?'grid':'none';
+}
+function render(){
+ if(!allowed(CUR)) CUR='dashboard';
+ Object.keys(CHARTS).forEach(k=>{try{CHARTS[k].destroy()}catch(e){}delete CHARTS[k]});
+ $('#view').innerHTML=PAGES[CUR](); if(AFTER[CUR])AFTER[CUR](); chrome(); window.scrollTo(0,0);
+}
+function go(p){ CUR=p; $('#side').classList.remove('open'); $('#scrim').classList.remove('show'); render(); try{ if(location.hash!=='#/'+p){IGN=true;location.hash='#/'+p;} }catch(e){} }
+window.addEventListener('hashchange',()=>{ if(IGN){IGN=false;return} const p=location.hash.replace('#/',''); if(PAGES[p]&&p!==CUR){CUR=p;render();} });
+function refreshAll(){ chrome(); if(PAGES[CUR]&&!['scan','movement','settings'].includes(CUR)&&!modalOpen()){ const y=window.scrollY; const ae=document.activeElement; if(ae&&['INPUT','SELECT','TEXTAREA'].includes(ae.tagName)&&$('#view').contains(ae)){return} render(); window.scrollTo(0,y);} }
+/* mutation helper: after data change, redraw */
+function afterChange(){ chrome(); if(!modalOpen()||true){ const y=window.scrollY; if(!['movement','scan'].includes(CUR)){ render(); window.scrollTo(0,y);} } }
+
+/* delegation */
+document.addEventListener('click',e=>{
+ const pop=e.target.closest('.pop'); if(!e.target.closest('[data-act=bell],[data-act=userMenu]')&&!pop){$('#bellPop').classList.remove('show');$('#userPop').classList.remove('show');}
+ if(e.target===$('#ovl')){closeModal();return}
+ const el=e.target.closest('[data-act]'); if(!el)return; const a=ACT[el.dataset.act]; if(a){ e.preventDefault(); a(el,e); }
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeModal();$('#side').classList.remove('open');$('#scrim').classList.remove('show');} if((e.key==='Enter'||e.key===' ')&&e.target.matches('.nav a')){e.preventDefault();e.target.click();} });
+function uiSet(el){ const [o,k]=el.dataset.ui.split('.'); UI[o][k]=el.value; if('page' in UI[o])UI[o].page=1; if(REFRESH[o])REFRESH[o](); }
+document.addEventListener('input',e=>{ if(e.target.dataset.ui&&e.target.tagName==='INPUT'&&e.target.type!=='date')uiSet(e.target); });
+document.addEventListener('change',e=>{ if(e.target.dataset.ui)uiSet(e.target); });
+ACT.go=el=>go(el.dataset.p);
+ACT.menu=()=>{$('#side').classList.add('open');$('#scrim').classList.add('show')};
+$('#scrim').addEventListener('click',()=>{$('#side').classList.remove('open');$('#scrim').classList.remove('show')});
+ACT.closeModal=closeModal;
+ACT.page=el=>{const k=el.dataset.k;UI[k].page=Math.max(1,UI[k].page+ +el.dataset.d);REFRESH[k]()};
+ACT.open=el=>openTrolley(el.dataset.id);
+ACT.kpi=el=>{const f=JSON.parse(el.dataset.f||'{}');UI.live={...UI.live,q:'',status:'',loc:'',grp:'',type:'',page:1,view:UI.live.view,...f};go('live')};
+ACT.bell=()=>{ const p=$('#bellPop'); $('#userPop').classList.remove('show'); p.classList.toggle('show');
+ p.innerHTML=`<h4>Notifications</h4>`+(DB.notifs.slice(0,8).map(n=>`<div class="ni ${n.read?'':'unread'}">${ico(n.level==='danger'?'warn':n.level==='warn'?'warn':'check','sm')}<div><div>${esc(n.text)}</div><span class="small muted">${ago(n.ts)}</span></div></div>`).join('')||empty('All clear','No notifications yet.'))+`<div style="display:flex;gap:8px;padding:8px"><button class="btn sm" data-act="readAll">Mark all read</button><button class="btn sm p" data-act="go" data-p="alerts">Open alerts</button></div>`; };
+ACT.readAll=()=>{DB.notifs.forEach(n=>n.read=true);save();chrome();$('#bellPop').classList.remove('show')};
+ACT.userMenu=()=>{ const p=$('#userPop'); $('#bellPop').classList.remove('show'); p.classList.toggle('show');
+ p.innerHTML=`<h4>Signed in as ${esc(me().name)} — switch role for the demo</h4>`+Object.keys(ROLES).map(r=>`<button class="it ${r===ROLE?'on':''}" data-act="setRole" data-r="${r}"><span class="av" style="width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:600">${USERS[r].split(' ').map(x=>x[0]).join('')}</span><span><b style="display:block;font-size:13px">${USERS[r]}</b><span class="small muted">${r}</span></span></button>`).join(''); };
+ACT.setRole=el=>{ROLE=el.dataset.r;try{localStorage.setItem(ROLEKEY,ROLE)}catch(e){} $('#userPop').classList.remove('show'); toast(`Now acting as ${me().name} (${ROLE})`); if(!allowed(CUR))CUR='dashboard'; render(); };
+$('#gs').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const t=lookup(e.target.value); if(t){openTrolley(t.id);e.target.value='';} else if(e.target.value.trim()){toast(`No trolley matches “${e.target.value.trim()}”`,'warn');} } });
+/* ====================== PAGES: dashboard / live / master / scan / overdue ====================== */
+const GROUPNODES={Store:'store','Production':'factory','Assembly':'wrench','Quality':'shield','Packing':'pkg','Dispatch':'truck','Finished Goods':'box','Maintenance':'wrench','Outside Plant':'pin'};
+function groupStats(){ const s={}; Object.keys(GROUPNODES).forEach(g=>s[g]={n:0,use:0,over:0,cap:0}); LOCS.forEach(l=>s[l.group].cap+=l.cap);
+ DB.trolleys.forEach(t=>{ if(!t.active)return; const g=s[grp(t.loc)]; g.n++; const e=eff(t); if(e==='In Use')g.use++; if(e==='Overdue')g.over++; }); return s; }
+function moveCount(fromG,toG){ return movesIn24h().filter(r=>fromG.includes(grp(r.from))&&toG.includes(grp(r.to))).length; }
+function kpiCard(label,val,icon,color,f,foot,total,alertCls){
+ const pct=total?Math.round(val/total*100):0;
+ return `<button class="kpi ${alertCls?'alert':''}" style="--c:${color}" data-act="kpi" data-f='${JSON.stringify(f)}'><div class="t"><span>${label}</span><span class="ib">${ico(icon)}</span></div><div class="v">${val}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="f">${foot}</div></button>`;
+}
+PAGES.dashboard=()=>{
+ const c=counts(), gs=groupStats(), pend=DB.approvals.filter(a=>a.status==='Pending').length;
+ const mv24=movesIn24h(), byG={}; mv24.forEach(r=>{const g=grp(r.to);byG[g]=(byG[g]||0)+1}); const topG=Object.entries(byG).sort((a,b)=>b[1]-a[1])[0];
+ const out=DB.trolleys.filter(t=>t.active&&eff(t)==='Outside Plant'), over=DB.trolleys.filter(t=>t.active&&eff(t)==='Overdue').sort((a,b)=>a.expected-b.expected);
+ const loaded=DB.trolleys.filter(t=>t.active&&['In Use','Waiting','Overdue'].includes(eff(t))).sort((a,b)=>a.since-b.since)[0];
+ const lastMv=DB.movements.find(r=>r.status==='Completed'||r.status==='In Transit');
+ const exc=DB.alerts.filter(a=>a.status!=='Resolved'&&['Wrong location','Wrong product','Unauthorized movement','Trolley missing'].includes(a.type)).length;
+ const att=DB.alerts.filter(a=>a.status==='Open'&&['Critical','High'].includes(a.priority)).sort((a,b)=>b.ts-a.ts).slice(0,5);
+ const chain=[['Store',['Store'],['Production']],['Production',['Production','Assembly'],['Quality']],['Quality',['Quality'],['Packing']],['Packing',['Packing','Finished Goods'],['Dispatch']]];
+ const mainG=['Store','Production','Quality','Packing','Dispatch'], sideG=['Assembly','Finished Goods','Maintenance','Outside Plant'];
+ const node=g=>{const s=gs[g];return `<div class="fn" style="--c:${g==='Outside Plant'?'var(--c-out)':g==='Maintenance'?'var(--c-maint)':'var(--accent)'}" data-act="kpi" data-f='{"grp":"${g}"}' role="button" tabindex="0"><div class="n">${ico(GROUPNODES[g])}${g}</div><div class="v">${s.n}</div><div class="s">${s.use} in use${s.over?` · <b style="color:var(--c-over)">${s.over} overdue</b>`:''}</div><div class="lb"><i style="width:${Math.min(100,Math.round(s.n/s.cap*100))}%"></i></div></div>`};
+ let fl=''; mainG.forEach((g,i)=>{ fl+=node(g); if(i<mainG.length-1){ fl+=`<div class="fc" aria-label="${moveCount(chain[i][1],chain[i][2])} moves in 24 hours"><span>${moveCount(chain[i][1],chain[i][2])}</span></div>`; } });
+ const recent=DB.trolleys.filter(t=>t.active).sort((a,b)=>b.lastMove-a.lastMove).slice(0,8);
+ const qa=`<div class="qa">${allowed('scan')?`<button class="p" data-act="go" data-p="scan">${ico('scan','lg')}Scan trolley</button>`:''}${hasPerm('movement')?`<button data-act="go" data-p="movement">${ico('move','lg')}Move trolley</button><button data-act="receive">${ico('inbox','lg')}Receive trolley</button>`:''}<button data-act="locate">${ico('pin','lg')}Current location</button><button data-act="go" data-p="alerts">${ico('bell','lg')}Alerts${att.length?` (${att.length})`:''}</button><button data-act="go" data-p="history">${ico('history','lg')}Movement history</button></div>`;
+ return `<div class="ph"><div><h1>Know what moved, where it is, and when its location changed.</h1><p>One live view of every trolley across the plant — replacing paper registers and Excel sheets. <b style="color:var(--ink)">Identify. Locate. Track. Notify. Trace.</b></p></div><div class="acts">${allowed('scan')?`<button class="btn p" data-act="go" data-p="scan">${ico('scan')}Scan trolley</button>`:''}${hasPerm('movement')?`<button class="btn" data-act="go" data-p="movement">${ico('move')}Record movement</button>`:''}</div></div>
+ ${qa}${flow()}
+ <div class="kpis">
+  ${kpiCard('Total trolleys',c.total,'cart','var(--accent)',{},`${DB.trolleys.filter(t=>!t.active).length} inactive`,c.total)}
+  ${kpiCard('Available',c.avail,'check','var(--c-avail)',{status:'Available'},'Ready to issue',c.total)}
+  ${kpiCard('In use',c.use,'activity','var(--c-use)',{status:'In Use'},'Loaded and working',c.total)}
+  ${kpiCard('In transit',c.transit,'move','var(--c-transit)',{status:'In Transit'},'Awaiting receipt',c.total)}
+  ${kpiCard('At production',c.prod,'factory','var(--ink2)',{grp:'Production'},'Lines 01 to 03',c.total)}
+  ${kpiCard('At quality',c.quality,'shield','var(--ink2)',{grp:'Quality'},`${c.wait} waiting for inspection`,c.total)}
+  ${kpiCard('At store',c.store,'store','var(--ink2)',{grp:'Store'},'Main Store',c.total)}
+  ${kpiCard('At dispatch',c.dispatch,'truck','var(--ink2)',{grp:'Dispatch'},'Loading and staging',c.total)}
+  ${kpiCard('Overdue',c.over,'clock','var(--c-over)',{status:'Overdue'},c.over?'Needs follow-up':'Nothing overdue',c.total,c.over>0)}
+  ${kpiCard('Outside plant',c.out,'pin','var(--c-out)',{status:'Outside Plant'},'Return time tracked',c.total)}
+ </div>
+ <div class="card mt"><div class="ch"><h3>Plant trolley movement overview</h3><span class="small muted">Numbers on the arrows are moves in the last 24 hours</span></div><div class="flow">${fl}</div><div class="side-nodes">${sideG.map(node).join('')}</div></div>
+ <div class="grid g21 mt">
+  <div class="card"><div class="ch"><h3>Operations questions, answered</h3></div><div class="cb"><dl class="kv" style="grid-template-columns:minmax(150px,230px) 1fr;gap:12px 16px">
+   <dt>Where is every trolley?</dt><dd><b>${c.total}</b> trolleys across ${LOCS.length} locations. <a href="#" data-act="go" data-p="live">Open live tracking</a> or <a href="#" data-act="go" data-p="locations">the plant map</a></dd>
+   <dt>Busiest location</dt><dd>${topG?`<b>${topG[0]}</b> with ${topG[1]} arrivals in 24 hours`:'No movement yet today'}</dd>
+   <dt>Outside the plant</dt><dd><b>${out.length}</b> ${out.slice(0,6).map(t=>tid(t.id)).join(' ')}${out.length>6?' …':''}</dd>
+   <dt>Overdue</dt><dd><b>${over.length}</b> ${over.slice(0,6).map(t=>tid(t.id)).join(' ')}${over.length>6?' …':''}</dd>
+   <dt>Last movement</dt><dd>${lastMv?`${tid(lastMv.trolley)} moved ${ago(lastMv.ts)} by ${esc(lastMv.operator)}: ${esc(lname(lastMv.from))} → ${esc(lname(lastMv.to))}`:'—'}</dd>
+   <dt>Longest at one location</dt><dd>${loaded?`${tid(loaded.id)} has been at ${esc(lname(loaded.loc))} for <b>${dur(NOW()-loaded.since)}</b>`:'—'}</dd>
+   <dt>Abnormal movements</dt><dd><b>${exc}</b> open exceptions and <b>${pend}</b> awaiting approval. <a href="#" data-act="go" data-p="${allowed('approvals')?'approvals':'alerts'}">Review</a></dd>
+   <dt>What is inside each trolley?</dt><dd>Product, batch and quantity are linked to every trolley. <a href="#" data-act="go" data-p="${allowed('products')?'products':'live'}">See materials</a></dd></dl></div></div>
+  <div class="card"><div class="ch"><h3>Needs attention</h3><button class="btn sm" data-act="go" data-p="alerts">All alerts</button></div><div class="cb">${att.length?att.map(a=>`<div style="padding:9px 0;border-bottom:1px solid var(--line2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center">${prBadge(a.priority)}<span class="small muted">${ago(a.ts)}</span></div><div style="margin-top:5px"><b>${esc(a.type)}</b> · ${tid(a.trolley)}</div><div class="small muted">${esc(a.msg)}</div></div>`).join(''):empty('No urgent alerts','Critical and high alerts appear here.')}${pend?`<div class="warn amber" style="margin-top:12px;padding:10px 12px"><div>${ico('shield')}</div><div><b>${pend} movement${pend>1?'s':''} waiting for approval</b><p><a href="#" data-act="go" data-p="${allowed('approvals')?'approvals':'alerts'}">Open approvals</a></p></div></div>`:''}</div></div>
+ </div>
+ <div class="card mt"><div class="ch"><h3>Latest trolley movements</h3><button class="btn sm" data-act="go" data-p="live">View all ${ico('arrow','sm')}</button></div>${liveTable(recent)}</div>`;
+};
+
+/* ---------- Live tracking ---------- */
+function liveFiltered(){ const f=UI.live, q=f.q.trim().toLowerCase();
+ return DB.trolleys.filter(t=>{ if(!t.active)return false; const e=eff(t);
+  if(f.status&&e!==f.status)return false; if(f.loc&&t.loc!==f.loc)return false; if(f.grp&&grp(t.loc)!==f.grp)return false; if(f.type&&t.type!==f.type)return false;
+  if(q&&![t.id,t.type,lname(t.loc),t.loc,pname(t.product),t.operator,t.rfid,t.qr].join(' ').toLowerCase().includes(q))return false; return true; }).sort((a,b)=>b.lastMove-a.lastMove); }
+function tagChips(t){ const ok=t.tag==='OK'; return `<span class="chip ${ok||t.tag==='RFID signal weak'?'g':'r'}">QR ${t.tag==='QR unreadable'?'unreadable':'ok'}</span> <span class="chip ${t.tag==='RFID signal weak'?'w':'g'}">RFID ${t.tag==='RFID signal weak'?'weak':'ok'}</span>`; }
+function liveTable(list){
+ if(!list.length) return empty('No trolleys match','Clear a filter or search for another ID.');
+ return `<div class="tw"><table><thead><tr><th>Trolley ID</th><th>Type</th><th>Current location</th><th>Previous location</th><th>Product / material</th><th>Status</th><th>Last movement</th><th>Operator</th><th>RFID / QR</th></tr></thead><tbody>${list.map(t=>{const e=eff(t);return `<tr class="${e==='Overdue'?'late':''}"><td>${tid(t.id)}</td><td>${esc(t.type)}</td><td><b>${esc(lname(t.loc))}</b><div class="small muted mono">${t.loc}</div></td><td>${esc(lname(t.prevLoc))}</td><td>${t.product?`${esc(pname(t.product))}<div class="small muted">${t.qty} ${PROD[t.product].uom} · ${esc(t.batch)}</div>`:'<span class="muted">Empty</span>'}</td><td>${badge(e)}${t.status==='In Transit'?`<div class="small muted">to ${esc(lname(t.dest))}</div>`:''}${flagChips(t)?`<div style="margin-top:3px">${flagChips(t)}</div>`:''}</td><td class="nowrap">${tm(t.lastMove)}<div class="small muted">${ago(t.lastMove)}</div></td><td>${esc(t.operator)}</td><td class="nowrap">${tagChips(t)}</td></tr>`}).join('')}</tbody></table></div>`;
+}
+function liveCards(list){
+ if(!list.length) return empty('No trolleys match','Clear a filter or search for another ID.');
+ return `<div class="tcards">${list.map(t=>{const e=eff(t);return `<div class="tc" style="--c:var(--c-${SKEY[e]})" data-act="open" data-id="${t.id}"><div class="r1"><span class="id">${t.id}</span>${badge(e)}</div><div class="small muted" style="margin-top:2px">${esc(t.type)}</div><dl><dt>Now at</dt><dd><b>${esc(lname(t.loc))}</b></dd><dt>From</dt><dd>${esc(lname(t.prevLoc))}</dd><dt>Material</dt><dd>${t.product?esc(pname(t.product))+' × '+t.qty:'Empty'}</dd><dt>Moved</dt><dd>${tm(t.lastMove)} · ${ago(t.lastMove)}</dd><dt>Operator</dt><dd>${esc(t.operator)}</dd></dl><div style="margin-top:9px">${tagChips(t)}</div></div>`}).join('')}</div>`;
+}
+function liveRes(){ const l=liveFiltered(), size=UI.live.view==='cards'?24:20, pages=Math.max(1,Math.ceil(l.length/size)); if(UI.live.page>pages)UI.live.page=pages; const slice=l.slice((UI.live.page-1)*size,UI.live.page*size);
+ return (UI.live.view==='cards'?liveCards(slice):liveTable(slice))+pager(l.length,UI.live.page,size,'live'); }
+REFRESH.live=()=>{const el=$('#liveRes'); if(el)el.innerHTML=liveRes();};
+PAGES.live=()=>{ const f=UI.live; const active=[f.status,f.grp&&('Group: '+f.grp)].filter(Boolean);
+ return `<div class="ph"><div><h1>Live trolley status</h1><p>Every trolley, where it is now, where it came from and what it carries.</p></div><div class="acts"><button class="btn ${f.view==='cards'?'p':''}" data-act="view" data-v="cards">Cards</button><button class="btn ${f.view==='table'?'p':''}" data-act="view" data-v="table">Table</button></div></div>${flow([1])}
+ <div class="card"><div class="tools"><input class="grow" data-ui="live.q" value="${esc(f.q)}" placeholder="Search by ID, product, operator, location" aria-label="Search trolleys">
+ <select data-ui="live.status" aria-label="Status"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${f.status===s?'selected':''}>${s}</option>`).join('')}</select>
+ <select data-ui="live.loc" aria-label="Location">${locOpts(f.loc,'All locations')}</select>
+ <select data-ui="live.type" aria-label="Type"><option value="">All types</option>${TTYPES.map(s=>`<option ${f.type===s?'selected':''}>${s}</option>`).join('')}</select>
+ ${(f.status||f.loc||f.grp||f.type||f.q)?`<button class="btn" data-act="clearLive">Clear filters${f.grp?` (${f.grp})`:''}</button>`:''}</div><div id="liveRes">${liveRes()}</div></div>`; };
+ACT.view=el=>{UI.live.view=el.dataset.v;UI.live.page=1;render()};
+ACT.clearLive=()=>{UI.live={...UI.live,q:'',status:'',loc:'',grp:'',type:'',page:1};render()};
+
+/* ---------- Overdue ---------- */
+PAGES.overdue=()=>{
+ const list=DB.trolleys.filter(t=>t.active&&eff(t)==='Overdue').sort((a,b)=>a.expected-b.expected), now=NOW();
+ const soon=DB.trolleys.filter(t=>t.active&&['In Use','Waiting'].includes(t.status)&&t.expected&&t.expected>now&&t.expected-now<30*MIN).sort((a,b)=>a.expected-b.expected);
+ const worst=list[0];
+ return `<div class="ph"><div><h1>Overdue trolleys</h1><p>Trolleys held past their expected return time. Each one is escalated by how long it is late.</p></div></div>
+ ${list.length?`<div class="warn"><div>${ico('clock','lg')}</div><div><h4>${list.length} trolley${list.length>1?'s are':' is'} overdue</h4><p>Longest delay: ${tid(worst.id)} at ${esc(lname(worst.loc))}, late by <b>${dur(now-worst.expected)}</b>.</p></div></div>`:`<div class="warn amber" style="border-color:var(--c-avail)"><div>${ico('check','lg')}</div><div><h4>No overdue trolleys</h4><p>Every trolley is inside its expected return window.</p></div></div>`}
+ <div class="card mt"><div class="ch"><h3>Overdue now</h3></div>${list.length?`<div class="tw"><table><thead><tr><th>Trolley ID</th><th>Current location</th><th>Expected return</th><th>Actual duration</th><th>Responsible department</th><th>Assigned person</th><th>Delay</th><th>Status</th><th></th></tr></thead><tbody>${list.map(t=>{const d=now-t.expected;return `<tr class="late"><td>${tid(t.id)}</td><td><b>${esc(lname(t.loc))}</b><div class="small muted mono">${t.loc}</div></td><td class="nowrap">${tm(t.expected)}<div class="small muted">${dt(t.expected)}</div></td><td class="nowrap">${dur(now-t.since)}</td><td>${esc(GDEPT[grp(t.loc)])}</td><td>${esc(t.operator)}</td><td class="nowrap" style="color:var(--c-over);font-weight:600">${ico('clock','sm')} ${dur(d)}</td><td>${badge('Overdue')}${d>2*HR?`<div class="small" style="color:var(--c-over)">Escalated</div>`:''}</td><td class="nowrap"><button class="btn sm" data-act="remind" data-id="${t.id}">Send reminder</button> ${hasPerm('movement')?`<button class="btn sm p" data-act="returnTrolley" data-id="${t.id}">Mark returned</button>`:''}</td></tr>`}).join('')}</tbody></table></div>`:empty('Nothing overdue','Trolleys that pass their expected return time will list here.')}</div>
+ <div class="card mt"><div class="ch"><h3>Due back in the next 30 minutes</h3></div>${soon.length?`<div class="tw"><table><thead><tr><th>Trolley ID</th><th>Location</th><th>Expected return</th><th>Time left</th><th>Assigned person</th></tr></thead><tbody>${soon.map(t=>`<tr><td>${tid(t.id)}</td><td>${esc(lname(t.loc))}</td><td>${tm(t.expected)}</td><td>${dur(t.expected-now)}</td><td>${esc(t.operator)}</td></tr>`).join('')}</tbody></table></div>`:empty('No trolleys at risk','Nothing is due back in the next half hour.')}</div>`;
+};
+ACT.remind=el=>{const t=T(el.dataset.id);logAudit('Reminder sent',t.id,'',t.operator);save();toast(`Reminder sent to ${t.operator} for ${t.id}`)};
+ACT.returnTrolley=el=>{const t=T(el.dataset.id); UI.mv.pre={trolley:t.id,type:'Production Return',from:t.loc,to:'STORE-01',qty:0}; go('movement')};
+
+/* ---------- Trolley details ---------- */
+function openTrolley(id){
+ const t=T(id); if(!t){toast('Trolley not found','warn');return}
+ const e=eff(t), ev=DB.movements.filter(r=>r.trolley===id&&r.status!=='Rejected').sort((a,b)=>a.ts-b.ts).slice(-8);
+ const al=DB.alerts.filter(a=>a.trolley===id&&a.status!=='Resolved'), au=DB.audit.filter(a=>a.trolley===id).slice(0,5);
+ const tl=ev.map((r,i)=>`<div class="ev ${i===ev.length-1?'now':''}"><b>${esc(lname(r.to))}</b><span>${esc(r.type)}${r.status!=='Completed'?` · ${esc(r.status)}`:''} · ${esc(r.operator)}</span><br><span>${dt(r.ts)}, ${tm(r.ts)}${r.from?` · from ${esc(lname(r.from))}`:''}</span></div>`).join('');
+ const body=`<div class="grid g2"><div>
+  <div class="tag"><div class="qrbox">${qrSvg(t.qr,92)}</div><div><div class="big">${t.id}</div><div style="margin:5px 0">${badge(e)} ${flagChips(t)}</div><div class="small muted mono">${t.qr}<br>${t.rfid}</div></div></div>
+  <h4 style="margin:16px 0 8px">Trolley information</h4><dl class="kv"><dt>Type</dt><dd>${esc(t.type)}</dd><dt>Capacity</dt><dd>${t.capacity} kg</dd><dt>Material type</dt><dd>${esc(t.matType)}</dd><dt>Department</dt><dd>${esc(t.dept)}</dd><dt>Assigned area</dt><dd>${esc(lname(t.area))}</dd><dt>Current location</dt><dd><b>${esc(lname(t.loc))}</b> <span class="muted mono">${t.loc}</span></dd><dt>At location for</dt><dd>${dur(NOW()-t.since)}</dd><dt>Times used</dt><dd>${t.uses}</dd><dt>Tags</dt><dd>${tagChips(t)}</dd></dl>
+  <h4 style="margin:16px 0 8px">Current assignment</h4>${t.product?`<dl class="kv"><dt>Product</dt><dd>${esc(pname(t.product))}</dd><dt>Batch number</dt><dd class="mono">${esc(t.batch)}</dd><dt>Quantity</dt><dd>${t.qty} ${PROD[t.product].uom}</dd><dt>Production line</dt><dd>${grp(t.loc)==='Production'?esc(lname(t.loc)):'—'}</dd><dt>Operator</dt><dd>${esc(t.operator)}</dd>${t.expected?`<dt>Expected return</dt><dd>${tm(t.expected)} ${e==='Overdue'?`<span class="chip r">${dur(NOW()-t.expected)} late</span>`:''}</dd>`:''}</dl>`:`<div class="muted">Empty. No product assigned. Last handled by ${esc(t.operator)}.</div>`}
+  ${al.length?`<h4 style="margin:16px 0 8px">Open alerts</h4>${al.map(a=>`<div style="margin-bottom:6px">${prBadge(a.priority)} <b>${esc(a.type)}</b><div class="small muted">${esc(a.msg)}</div></div>`).join('')}`:''}
+ </div><div><h4 style="margin-bottom:10px">Movement timeline</h4><div class="tl">${tl||'<span class="muted">No movements recorded.</span>'}</div>
+  ${au.length?`<h4 style="margin:6px 0 8px">Recent audit entries</h4>${au.map(a=>`<div class="small" style="padding:5px 0;border-bottom:1px solid var(--line2)"><b>${esc(a.action)}</b> · ${esc(a.user)} · ${tm(a.ts)}<div class="muted">${esc(a.prev)}${a.next?' → '+esc(a.next):''}</div></div>`).join('')}`:''}</div></div>`;
+ const foot=`${hasPerm('movement')?`<button class="btn p" data-act="moveFrom" data-id="${id}">${ico('move')}Move trolley</button>`:''}<button class="btn" data-act="issue" data-id="${id}">${ico('flag')}Report issue</button><button class="btn" data-act="qr" data-id="${id}">${ico('qr')}Generate QR</button>${hasPerm('master')?`<button class="btn" data-act="editT" data-id="${id}">${ico('edit')}Edit</button>`:''}`;
+ openModal(`Trolley ${id}`,body,foot,true);
+}
+ACT.moveFrom=el=>{const t=T(el.dataset.id);closeModal();UI.mv.pre={trolley:t.id,from:t.loc};go('movement')};
+ACT.qr=el=>{const t=T(el.dataset.id); openModal(`QR label · ${t.id}`,`<div style="display:grid;place-items:center;gap:12px"><div class="qrbox">${qrSvg(t.qr,220)}</div><div class="big">${t.id}</div><div class="small muted mono">${t.qr} · ${t.rfid}</div><p class="muted" style="text-align:center;margin:0;max-width:40ch">Print this label and fix it to the trolley frame. The code is permanent and tied to this trolley ID only.</p></div>`,`<button class="btn" data-act="closeModal">Close</button><button class="btn p" data-act="saveQr" data-id="${t.id}">${ico('download')}Save label</button>`)};
+ACT.saveQr=async el=>{const t=T(el.dataset.id); const svg=qrSvg(t.qr,512).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '); if(await saveFile(`${t.id}-qr.svg`,svg,'image/svg+xml'))toast('QR label saved for '+t.id)};
+
+/* ---------- Trolley master ---------- */
+function masterFiltered(){ const f=UI.master,q=f.q.trim().toLowerCase(); return DB.trolleys.filter(t=>{const e=eff(t); if(f.type&&t.type!==f.type)return false; if(f.status&&e!==f.status)return false; if(f.dept&&t.dept!==f.dept)return false; if(q&&![t.id,t.qr,t.rfid,t.type,t.area].join(' ').toLowerCase().includes(q))return false; return true}); }
+function masterRes(){ const l=masterFiltered(), size=15, pages=Math.max(1,Math.ceil(l.length/size)); if(UI.master.page>pages)UI.master.page=pages; const s=l.slice((UI.master.page-1)*size,UI.master.page*size); const ed=hasPerm('master');
+ return (s.length?`<div class="tw"><table><thead><tr><th>Trolley ID</th><th>QR code</th><th>RFID number</th><th>Type</th><th>Capacity</th><th>Material type</th><th>Department</th><th>Current location</th><th>Status</th><th>Assigned area</th><th>Created</th><th>Last movement</th><th></th></tr></thead><tbody>${s.map(t=>`<tr style="${t.active?'':'opacity:.6'}"><td>${tid(t.id)}</td><td class="mono small">${t.qr}</td><td class="mono small">${t.rfid}</td><td>${esc(t.type)}</td><td>${t.capacity} kg</td><td>${esc(t.matType)}</td><td>${esc(t.dept)}</td><td>${esc(lname(t.loc))}</td><td>${badge(eff(t))}</td><td class="mono small">${t.area}</td><td class="nowrap">${dt(t.created)}</td><td class="nowrap">${tm(t.lastMove)}<div class="small muted">${dt(t.lastMove)}</div></td><td class="nowrap"><button class="btn sm" data-act="qr" data-id="${t.id}" title="Generate QR">${ico('qr','sm')}Generate QR</button> <button class="btn sm" data-act="open" data-id="${t.id}">${ico('eye','sm')}View details</button>${ed?` <button class="btn sm" data-act="editT" data-id="${t.id}">${ico('edit','sm')}Edit</button> <button class="btn sm ${t.active?'':'g'}" data-act="toggleT" data-id="${t.id}">${ico('power','sm')}${t.active?'Deactivate':'Activate'}</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:empty('No trolleys match','Adjust the filters or add a new trolley.'))+pager(l.length,UI.master.page,size,'master'); }
+REFRESH.master=()=>{const el=$('#masterRes'); if(el)el.innerHTML=masterRes();};
+const nextId=()=>'TR-'+pad3(Math.max(0,...DB.trolleys.map(t=>parseInt(t.id.slice(3))))+1);
+PAGES.master=()=>{ const f=UI.master, ed=hasPerm('master'), nid=nextId(), sample=DB.trolleys[0];
+ return `<div class="ph"><div><h1>Trolley master</h1><p>The register of every trolley, each with one permanent ID, one QR label and one RFID tag.</p></div><div class="acts">${ed?`<button class="btn p" data-act="addT">${ico('plus')}Add trolley</button>`:''}</div></div>
+ <div class="card id-banner"><div class="tag" style="border:0;padding:0"><div class="qrbox">${qrSvg(sample.qr,84)}</div><div><div class="big">${sample.id}</div><div class="small muted mono">${sample.qr}<br>${sample.rfid}</div></div></div><div style="flex:1;min-width:240px"><h3>One trolley, one identity</h3><p class="muted" style="margin:4px 0 0;max-width:62ch">Each trolley is registered once with a unique ID, bound to its QR label and RFID tag. IDs cannot be reused, even after a trolley is deactivated. The next free ID is <b class="mono" style="color:var(--ink)">${nid}</b>.</p></div><div style="display:flex;gap:18px"><div><div class="big">${DB.trolleys.length}</div><div class="small muted">unique IDs</div></div><div><div class="big">${DB.trolleys.filter(t=>t.active).length}</div><div class="small muted">active</div></div></div></div>
+ <div class="card mt"><div class="tools"><input class="grow" data-ui="master.q" value="${esc(f.q)}" placeholder="Search by trolley ID, QR or RFID number" aria-label="Search master"><select data-ui="master.type" aria-label="Type"><option value="">All types</option>${TTYPES.map(s=>`<option ${f.type===s?'selected':''}>${s}</option>`).join('')}</select><select data-ui="master.status" aria-label="Status"><option value="">All statuses</option>${[...STATUSES,'Inactive'].map(s=>`<option ${f.status===s?'selected':''}>${s}</option>`).join('')}</select><select data-ui="master.dept" aria-label="Department"><option value="">All departments</option>${DEPTS.map(s=>`<option ${f.dept===s?'selected':''}>${s}</option>`).join('')}</select></div><div id="masterRes">${masterRes()}</div></div>`; };
+function trolleyForm(t){
+ const add=!t; t=t||{id:nextId(),type:TTYPES[0],capacity:500,matType:'Raw Material',dept:'Stores',area:'STORE-01',rfid:'RFID-'+Math.floor(Math.random()*0xFFFFFFF+0x10000000).toString(16).toUpperCase(),loc:'STORE-01'};
+ return `<form id="tf" class="fgrid" novalidate><input type="hidden" name="mode" value="${add?'add':'edit'}"><div class="fld"><label for="f1">Trolley ID</label><input id="f1" name="id" value="${t.id}" ${add?'':'disabled'} class="mono"><div class="hint">${add?'Format TR-### · must be unique':'IDs are permanent and cannot be changed'}</div></div>
+ <div class="fld"><label>QR code</label><input value="QR-${t.id}" disabled class="mono"><div class="hint">Generated from the trolley ID</div></div>
+ <div class="fld"><label for="f2">Trolley type</label><select id="f2" name="type">${TTYPES.map(x=>`<option ${t.type===x?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="fld"><label for="f3">Capacity (kg)</label><input id="f3" name="capacity" type="number" min="50" value="${t.capacity}"></div>
+ <div class="fld"><label for="f4">Material type</label><select id="f4" name="matType">${['Raw Material','Component','WIP','Finished Goods','Rework'].map(x=>`<option ${t.matType===x?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="fld"><label for="f5">Department</label><select id="f5" name="dept">${DEPTS.map(x=>`<option ${t.dept===x?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="fld"><label for="f6">Assigned area</label><select id="f6" name="area">${locOpts(t.area)}</select></div>
+ <div class="fld"><label for="f7">RFID number</label><input id="f7" name="rfid" value="${t.rfid}" class="mono"></div>
+ ${add?`<div class="fld full"><label for="f8">Starting location</label><select id="f8" name="loc">${locOpts(t.loc)}</select></div>`:''}<div class="err full" id="tfErr"></div></form>`; }
+ACT.addT=()=>openModal('Add trolley',trolleyForm(null),`<button class="btn" data-act="closeModal">Cancel</button><button class="btn p" data-act="saveT">Save trolley</button>`);
+ACT.editT=el=>{closeModal();openModal('Edit trolley '+el.dataset.id,trolleyForm(T(el.dataset.id)),`<button class="btn" data-act="closeModal">Cancel</button><button class="btn p" data-act="saveT" data-id="${el.dataset.id}">Save changes</button>`)};
+document.addEventListener('change',e=>{ if(e.target.name==='type'&&e.target.closest('#tf')){ const i=TINFO[e.target.value]; $('#tf [name=capacity]').value=i.cap; $('#tf [name=matType]').value=i.mat; } });
+ACT.saveT=el=>{ const f=$('#tf'), v=Object.fromEntries(new FormData(f).entries()), err=m=>{$('#tfErr').textContent=m};
+ if(v.mode==='add'){ const id=String(v.id||'').trim().toUpperCase(); if(!/^TR-\d{3,4}$/.test(id))return err('Trolley ID must look like TR-129.'); if(T(id))return err(`${id} already exists. Every trolley needs a unique ID.`);
+  if(DB.trolleys.some(t=>t.rfid.toLowerCase()===v.rfid.trim().toLowerCase()))return err('That RFID number is already linked to another trolley.'); if(!(+v.capacity>0))return err('Enter a capacity above zero.');
+  const now=NOW(); DB.trolleys.unshift({id,type:v.type,capacity:+v.capacity,matType:v.matType,dept:v.dept,area:v.area,qr:'QR-'+id,rfid:v.rfid.trim(),loc:v.loc,prevLoc:v.loc,dest:null,status:'Available',product:null,batch:'',qty:0,operator:me().name,created:now,lastMove:now,since:now,expected:null,active:true,uses:0,flags:[],tag:'OK'});
+  DB.trolleys.sort((a,b)=>a.id.localeCompare(b.id)); logAudit('Trolley registered',id,'',lname(v.loc)); save(); closeModal(); toast(`${id} added with QR ${'QR-'+id}`); render(); ACT.qr({dataset:{id}}); }
+ else { const t=T(el.dataset.id); if(DB.trolleys.some(x=>x.id!==t.id&&x.rfid.toLowerCase()===v.rfid.trim().toLowerCase()))return err('That RFID number is already linked to another trolley.'); if(!(+v.capacity>0))return err('Enter a capacity above zero.');
+  [['type','Type'],['capacity','Capacity'],['matType','Material type'],['dept','Department'],['area','Assigned area'],['rfid','RFID']].forEach(([k,l])=>{const nv=k==='capacity'?+v[k]:String(v[k]).trim(); if(t[k]!==nv){logAudit('Trolley edited: '+l,t.id,String(t[k]),String(nv));t[k]=nv}}); save(); closeModal(); toast(t.id+' updated'); render(); }
+};
+ACT.toggleT=el=>{ const t=T(el.dataset.id); if(t.active){ if(t.qty>0||t.status==='In Transit'){ toast(`${t.id} still carries material or is in transit. Empty and receive it first.`,'warn'); return; }
+  openModal('Deactivate trolley',`<p style="margin:0">Deactivate <b class="mono">${t.id}</b>? It will disappear from live tracking and cannot be moved. Its ID, QR and history stay on record.</p>`,`<button class="btn" data-act="closeModal">Cancel</button><button class="btn d" data-act="doToggle" data-id="${t.id}">Deactivate</button>`); }
+ else ACT.doToggle(el); };
+ACT.doToggle=el=>{ const t=T(el.dataset.id); t.active=!t.active; logAudit(t.active?'Trolley activated':'Trolley deactivated',t.id,t.active?'Inactive':'Active',t.active?'Active':'Inactive'); save(); closeModal(); toast(`${t.id} ${t.active?'activated':'deactivated'}`); syncAlerts(); save(); render(); };
+
+/* ---------- Scan ---------- */
+function scanResHtml(){ const s=UI.scan.res;
+ if(!s) return `<div class="empty">${ico('scan','lg')}<div style="margin-top:8px"><b style="color:var(--ink)">Waiting for a scan</b></div><div>Scan a QR label or RFID tag, or type the trolley ID. Details and actions appear here.</div></div>`;
+ if(s.err) return `<div class="warn" style="margin:16px"><div>${ico('warn','lg')}</div><div><h4>Trolley not found</h4><p>No trolley matches “${esc(s.err)}”. Check the ID, or register it in Trolley Master.</p></div></div>`;
+ const t=T(s.id), e=eff(t); const can=hasPerm('movement');
+ return `<div class="res" style="--c:var(--c-${SKEY[e]})"><div style="padding:16px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><div class="small muted">Identified by ${s.src}</div><div class="big">${t.id}</div></div>${badge(e)}</div>
+ <dl class="kv" style="margin-top:12px"><dt>Current location</dt><dd><b>${esc(lname(t.loc))}</b> <span class="muted mono small">${t.loc}</span></dd><dt>Current status</dt><dd>${esc(e)}${t.status==='In Transit'?` to ${esc(lname(t.dest))}`:''}</dd><dt>Assigned material</dt><dd>${t.product?`${esc(pname(t.product))} × ${t.qty}`:'Empty'}</dd><dt>Last movement</dt><dd>${tm(t.lastMove)} · ${ago(t.lastMove)}</dd><dt>Last operator</dt><dd>${esc(t.operator)}</dd><dt>At location for</dt><dd>${dur(NOW()-t.since)}</dd></dl>${flagChips(t)?`<div style="margin-top:10px">${flagChips(t)}</div>`:''}</div>
+ <div style="padding:0 16px 16px"><div class="bigbtns">${can?`<button class="btn p" data-act="moveFrom" data-id="${t.id}">${ico('move')}Move trolley</button><button class="btn" data-act="receive" data-id="${t.id}">${ico('inbox')}Receive trolley</button>`:''}<button class="btn" data-act="issue" data-id="${t.id}">${ico('flag')}Report issue</button><button class="btn" data-act="open" data-id="${t.id}">${ico('history')}View history</button></div></div></div>`; }
+REFRESH.scan=()=>{const el=$('#scanRes'); if(el)el.innerHTML=scanResHtml(); const r=$('#recent'); if(r)r.innerHTML=recentHtml();};
+const recentHtml=()=>UI.scan.recent.length?UI.scan.recent.slice(0,5).map(r=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line2)"><span>${r.id?tid(r.id):`<span class="muted">${esc(r.q)}</span>`}</span><span class="small muted">${r.src} · ${tm(r.at)}</span></div>`).join(''):'<div class="small muted">No scans yet in this session.</div>';
+function doScan(code,src){ const t=lookup(code); UI.scan.res=t?{id:t.id,src}:{err:String(code).trim()}; UI.scan.recent.unshift({id:t&&t.id,q:code,src,at:NOW()}); REFRESH.scan(); const r=$('#scanRes'); if(r&&matchMedia('(max-width:900px)').matches)r.scrollIntoView({behavior:'smooth',block:'start'}); }
+PAGES.scan=()=>`<div class="ph"><div><h1>Scan trolley</h1><p>Identify a trolley from its QR label or RFID tag and see where it is straight away.</p></div></div>${flow([0,1])}
+ <div class="grid g2"><div class="card"><div class="cb"><div class="vf" aria-label="QR scanner preview"><i class="c a"></i><i class="c b"></i><i class="c c2"></i><i class="c d"></i><i class="ln"></i><p>${ico('qr','lg')}<br>Point the camera at the QR label.<br><span class="small">Camera preview is a placeholder in this prototype.</span></p></div>
+  <div class="rfid" style="margin-top:12px"><span class="dotg"></span><div style="flex:1"><b>RFID reader RG-03 connected</b><div class="small muted">Handheld reader ready · 4 of 4 gate antennas online</div></div>${ico('rfid')}</div>
+  <form id="scanForm" style="display:flex;gap:8px;margin-top:12px"><div class="fld" style="flex:1"><input id="scanIn" placeholder="Enter trolley ID, e.g. TR-018" aria-label="Trolley ID" autocomplete="off" class="mono"></div><button class="btn p" type="submit">${ico('scan')}Scan</button></form>
+  <div class="acts" style="margin-top:10px"><button class="btn" data-act="simQr">${ico('qr')}Simulate QR scan</button><button class="btn" data-act="simRfid">${ico('rfid')}Simulate RFID read</button></div>
+  <h4 style="margin:16px 0 4px">Recent scans</h4><div id="recent">${recentHtml()}</div></div></div>
+ <div class="card" id="scanRes">${scanResHtml()}</div></div>`;
+AFTER.scan=()=>{ $('#scanForm').addEventListener('submit',e=>{e.preventDefault();const v=$('#scanIn').value; if(!v.trim()){toast('Enter a trolley ID first','warn');return} doScan(v,'manual entry'); $('#scanIn').select();}); };
+const rndT=()=>{const a=DB.trolleys.filter(t=>t.active);return a[Math.floor(Math.random()*a.length)]};
+ACT.simQr=()=>{const t=rndT();$('#scanIn').value=t.qr;doScan(t.qr,'QR scan')};
+ACT.simRfid=()=>{const t=rndT();$('#scanIn').value=t.rfid;doScan(t.rfid,'RFID read')};
+function openReceive(id){
+ const tr=DB.trolleys.filter(t=>t.active&&t.status==='In Transit'); if(id&&!tr.some(t=>t.id===id)){ const t=T(id); openModal('Receive trolley',`<p style="margin:0"><b class="mono">${id}</b> is not in transit. It is recorded at <b>${esc(lname(t.loc))}</b> with status ${esc(eff(t))}. To change its location, record a movement.</p>`,`<button class="btn" data-act="closeModal">Close</button><button class="btn p" data-act="moveFrom" data-id="${id}">Record movement</button>`); return; }
+ if(!tr.length){ openModal('Receive trolley',empty('Nothing to receive','No trolleys are in transit right now.'),`<button class="btn" data-act="closeModal">Close</button>`); return; }
+ openModal('Receive trolley',`<div class="fld"><label for="rcv">Trolley in transit</label><select id="rcv">${tr.map(t=>`<option value="${t.id}" ${t.id===id?'selected':''}>${t.id} · ${lname(t.loc)} → ${lname(t.dest)}</option>`).join('')}</select><div class="hint">Confirming records arrival at the destination and completes the movement.</div></div><div class="fld mt"><label for="rcvOp">Received by</label><input id="rcvOp" value="${esc(me().name)}" list="opl"></div><datalist id="opl">${OPS.map(o=>`<option value="${o}">`).join('')}</datalist>`,`<button class="btn" data-act="closeModal">Cancel</button><button class="btn p" data-act="confirmReceive">${ico('inbox')}Confirm receipt</button>`); }
+ACT.receive=el=>openReceive(el.dataset.id);
+ACT.confirmReceive=()=>{ const id=$('#rcv').value, r=receiveTrolley(id,$('#rcvOp').value||me().name); closeModal(); if(r.ok){toast(`${id} received at ${lname(r.to)}`); if(UI.scan.res&&UI.scan.res.id===id)REFRESH.scan(); afterChange();} };
+const ISSUES={'Damaged wheel or frame':['Trolley maintenance due','Medium'],'Tag unreadable (QR or RFID)':['Trolley maintenance due','Low'],'Trolley missing from its location':['Trolley missing','High'],'Wrong trolley at this location':['Wrong location','Medium'],'Wrong product loaded':['Wrong product','High']};
+ACT.issue=el=>{ const id=el.dataset.id; openModal('Report issue · '+id,`<div class="fld"><label for="isT">What is wrong?</label><select id="isT">${Object.keys(ISSUES).map(k=>`<option>${k}</option>`).join('')}</select></div><div class="fld mt"><label for="isN">Details</label><textarea id="isN" rows="3" placeholder="What did you see?"></textarea></div>`,`<button class="btn" data-act="closeModal">Cancel</button><button class="btn p" data-act="sendIssue" data-id="${id}">Report issue</button>`); };
+ACT.sendIssue=el=>{ const id=el.dataset.id,k=$('#isT').value,[type,pr]=ISSUES[k], note=$('#isN').value.trim(); const a=raiseAlert({type,trolley:id,loc:T(id).loc,priority:pr,msg:k+(note?': '+note:'')+` (reported by ${me().name})`}); closeModal(); if(a){save();toast(`Issue reported for ${id}`);chrome();} else toast(`An open “${type}” alert already exists for ${id}`,'warn'); };
+function openLocate(){ openModal('Current location',`<div class="fld"><label for="lcIn">Trolley ID</label><input id="lcIn" class="mono" placeholder="TR-018" autocomplete="off"></div><div id="lcOut" class="mt"></div>`,`<button class="btn" data-act="closeModal">Close</button><button class="btn p" data-act="doLocate">${ico('pin')}Find trolley</button>`); $('#lcIn').addEventListener('keydown',e=>{if(e.key==='Enter')ACT.doLocate()}); }
+ACT.locate=openLocate;
+ACT.doLocate=()=>{ const t=lookup($('#lcIn').value); $('#lcOut').innerHTML=t?`<div class="res" style="--c:var(--c-${SKEY[eff(t)]});padding:14px"><div style="display:flex;justify-content:space-between;align-items:center"><div class="big">${t.id}</div>${badge(eff(t))}</div><div style="margin-top:8px;font-size:17px"><b>${esc(lname(t.loc))}</b></div><div class="muted">${t.product?esc(pname(t.product))+' × '+t.qty:'Empty'} · moved ${ago(t.lastMove)} by ${esc(t.operator)}</div></div>`:`<div class="err">No trolley matches that ID.</div>`; };
+/* ====================== PAGES: movement / locations / history / products ====================== */
+const MSK={'Completed':'avail','In Transit':'transit','Pending Approval':'wait','Rejected':'over','Correction Requested':'wait','Approved':'avail','Pending':'wait'};
+const sbadge=s=>`<span class="bd s-${MSK[s]||'off'}">${esc(s)}</span>`;
+let PENDING_M=null;
+
+/* ---------- Movement entry ---------- */
+const mvTypes=()=>ROLES[ROLE].types||MTYPES;
+function recentMoves(n){ return DB.movements.filter(r=>r.status!=='Pending Approval').slice(0,n).map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--line2)"><div style="display:flex;justify-content:space-between;gap:8px">${tid(r.trolley)}<span class="small muted">${tm(r.ts)}</span></div><div class="small">${esc(lname(r.from))} → ${esc(lname(r.to))}</div><div class="small muted">${esc(r.type)} · ${esc(r.operator)}</div></div>`).join(''); }
+PAGES.movement=()=>{
+ if(!hasPerm('movement')) return `<div class="ph"><div><h1>Record trolley movement</h1></div></div>${empty('Your role cannot record movements','Switch to Operator, Supervisor, Quality or Store user to record a movement.')}`;
+ const d=new Date(), pd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), pt=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+ const l=UI.mv.last;
+ return `<div class="ph"><div><h1>Record trolley movement</h1><p>Scan or enter the trolley, choose where it is going and confirm. The location, status, history and dashboard counts update straight away.</p></div></div>${flow([2,3])}
+ ${l?`<div class="warn ${l.pending?'amber':''}" style="${l.pending?'':'border-color:var(--c-avail);background:color-mix(in srgb,var(--c-avail) 9%,var(--card))'};margin-bottom:16px"><div>${ico(l.pending?'shield':'check','lg')}</div><div><h4>${l.pending?'Sent for supervisor approval':'Movement recorded'}</h4><p>${tid(l.trolley)} ${esc(lname(l.from))} → ${esc(lname(l.to))}. ${l.pending?'The trolley stays where it is until a supervisor approves.':`${esc(lname(l.from))} now holds ${l.fromAfter} trolleys; ${esc(lname(l.to))} holds ${l.toAfter}.`}</p></div></div>`:''}
+ <div class="grid g21"><form class="card" id="mvForm" novalidate><div class="ch"><h3>Movement details</h3></div><div class="cb"><div class="fgrid">
+  <div class="fld"><label for="m1">Trolley ID</label><input id="m1" name="trolley" list="tl" class="mono" placeholder="TR-001" autocomplete="off" required><datalist id="tl">${DB.trolleys.filter(t=>t.active).map(t=>`<option value="${t.id}">`).join('')}</datalist></div>
+  <div class="fld"><label for="m2">Movement type</label><select id="m2" name="type">${mvTypes().map(x=>`<option>${x}</option>`).join('')}</select></div>
+  <div class="fld"><label for="m3">From location</label><select id="m3" name="from">${locOpts('','Select location')}</select></div>
+  <div class="fld"><label for="m4">To location</label><select id="m4" name="to">${locOpts('','Select location')}</select></div>
+  <div class="fld"><label for="m5">Product / material</label><select id="m5" name="product">${prodOpts('','No product (empty trolley)')}</select></div>
+  <div class="fld"><label for="m6">Quantity</label><input id="m6" name="qty" type="number" min="0" value="0"></div>
+  <div class="fld"><label for="m7">Operator name</label><input id="m7" name="operator" list="opl" value="${esc(me().name)}"><datalist id="opl">${OPS.map(o=>`<option value="${o}">`).join('')}</datalist></div>
+  <div class="fld"><label for="m8">Department</label><select id="m8" name="dept">${DEPTS.map(x=>`<option>${x}</option>`).join('')}</select></div>
+  <div class="fld"><label for="m9">Movement date</label><input id="m9" name="date" type="date" value="${pd}"></div>
+  <div class="fld"><label for="m10">Movement time</label><input id="m10" name="time" type="time" value="${pt}"></div>
+  <div class="fld"><label for="m11">Reason</label><input id="m11" name="reason" list="rsl" placeholder="Why is it moving?"><datalist id="rsl"><option value="Line replenishment"><option value="Inspection hold"><option value="Inspection passed"><option value="Ready for packing"><option value="Customer order dispatch"><option value="Return empty trolley"><option value="Scheduled service"><option value="Job work at vendor"></datalist></div>
+  <div class="fld"><label for="m12">Status after movement</label><select id="m12" name="statusAfter"><option value="auto">Set automatically</option>${['Available','In Use','Waiting','Maintenance','Outside Plant'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+  <div class="fld full"><label for="m13">Remarks</label><textarea id="m13" name="remarks" rows="2" placeholder="Optional"></textarea></div>
+  <div class="fld full"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="transit" style="width:auto;min-height:0"> Mark as in transit. The trolley stays at the origin until someone receives it at the destination.</label></div>
+ </div></div><div class="mf" style="justify-content:flex-start"><button class="btn p" type="submit" id="mvGo">${ico('check')}Confirm movement</button><button class="btn" type="button" data-act="mvCancel">Cancel</button></div></form>
+ <div><div class="card"><div class="ch"><h3>Verify before you confirm</h3></div><div class="cb" id="mvPrev"><div class="muted">Enter a trolley ID to see its current location, assigned material and any exceptions.</div></div></div><div class="card mt"><div class="ch"><h3>Latest movements</h3></div><div class="cb">${recentMoves(5)}</div></div></div></div>`;
+};
+function mvRead(){ const f=$('#mvForm'); if(!f)return null; const v=Object.fromEntries(new FormData(f).entries()); v.transit=!!f.elements.transit.checked; v.qty=+v.qty||0; v.trolley=String(v.trolley||'').trim().toUpperCase(); const ts=new Date((v.date||'')+'T'+(v.time||'00:00')).getTime(); v.ts=isNaN(ts)?NOW():ts; return v; }
+function mvPreview(){ const v=mvRead(); if(!v)return; const el=$('#mvPrev'); const t=T(v.trolley); if(!v.trolley){el.innerHTML='<div class="muted">Enter a trolley ID to see its current location, assigned material and any exceptions.</div>';return}
+ if(!t){el.innerHTML=`<div class="err">No trolley is registered as ${esc(v.trolley)}.</div>`;return}
+ const r=validateMove(v), e=eff(t); let h=`<div style="display:flex;justify-content:space-between;align-items:center"><div class="big" style="font-size:22px">${t.id}</div>${badge(e)}</div><dl class="kv" style="margin-top:8px"><dt>Now at</dt><dd><b>${esc(lname(t.loc))}</b></dd><dt>Carrying</dt><dd>${t.product?esc(pname(t.product))+' × '+t.qty:'Empty'}</dd><dt>Last moved</dt><dd>${ago(t.lastMove)} by ${esc(t.operator)}</dd></dl>`;
+ if(r.fatal) h+=`<div class="err" style="margin-top:10px">${esc(r.fatal)}</div>`;
+ else if(r.issues.length) h+=`<div class="warn amber" style="margin-top:12px;padding:10px 12px"><div>${ico('warn')}</div><div><b>${r.issues.length} exception${r.issues.length>1?'s':''} to check</b>${r.issues.map(i=>`<p>${esc(i.msg)}</p>`).join('')}<p class="small">${hasPerm('approve')?'You can override as supervisor.':'Supervisor approval will be requested.'}</p></div></div>`;
+ else if(v.from&&v.to){ const s=locStats(), fa=s[v.from]?s[v.from].trolleys:0, ta=s[v.to]?s[v.to].trolleys:0; h+=`<div class="warn" style="margin-top:12px;padding:10px 12px;border-color:var(--c-avail);background:color-mix(in srgb,var(--c-avail) 9%,var(--card))"><div style="color:var(--c-avail)">${ico('check')}</div><div><b>Ready to move</b><p>${esc(lname(v.from))}: ${fa} → ${Math.max(0,fa-1)} trolleys<br>${esc(lname(v.to))}: ${ta} → ${ta+1} trolleys</p></div></div>`; }
+ el.innerHTML=h; }
+AFTER.movement=()=>{
+ const f=$('#mvForm'); if(!f)return; const sel=n=>f.elements[n];
+ const fillFromTrolley=()=>{ const t=T(String(sel('trolley').value).trim().toUpperCase()); if(t){ sel('from').value=t.loc; if(t.product&&+sel('qty').value===0&&!sel('product').value){sel('product').value=t.product;sel('qty').value=t.qty;} } mvPreview(); };
+ sel('trolley').addEventListener('change',fillFromTrolley); sel('trolley').addEventListener('input',()=>{ if(T(sel('trolley').value.trim().toUpperCase()))fillFromTrolley(); else mvPreview(); });
+ sel('type').addEventListener('change',()=>{ const d=MDEFAULT[sel('type').value]||[null,null]; if(d[1]){sel('to').value=d[1];sel('dept').value=GDEPT[grp(d[1])];} if(['Production Return','Store Transfer','Maintenance'].includes(sel('type').value))sel('qty').value=0; if(sel('type').value==='Production Issue'&&!sel('to').value)sel('to').value='PROD-L01'; mvPreview(); });
+ sel('to').addEventListener('change',()=>{ if(sel('to').value)sel('dept').value=GDEPT[grp(sel('to').value)]; mvPreview(); });
+ ['from','product','qty','transit'].forEach(n=>sel(n).addEventListener('change',mvPreview)); sel('qty').addEventListener('input',mvPreview);
+ const p=UI.mv.pre; if(p){ sel('trolley').value=p.trolley||''; fillFromTrolley(); if(p.type){sel('type').value=p.type;} if(p.from)sel('from').value=p.from; if(p.to){sel('to').value=p.to;sel('dept').value=GDEPT[grp(p.to)];} if(p.qty!=null){sel('qty').value=p.qty; if(+p.qty===0)sel('product').value='';} UI.mv.pre=null; mvPreview(); }
+ UI.mv.last=null;
+ f.addEventListener('submit',e=>{ e.preventDefault(); const m=mvRead(); if(!m.trolley)return toast('Enter a trolley ID','warn'); if(!m.type)return toast('Choose a movement type','warn');
+  if(!m.operator||!m.operator.trim())return toast('Enter the operator name','warn');
+  const v=validateMove(m); if(v.fatal)return toast(v.fatal,'warn'); const approver=hasPerm('approve'), outside=grp(m.to)==='Outside Plant'&&DB.settings.outsideApproval&&!approver, issues=v.issues;
+  if(issues.length||outside){ PENDING_M=m; const all=[...(outside?[{kind:'Outside plant',msg:`${m.trolley} is leaving the plant. A supervisor must approve outside plant movements.`}]:[]),...issues];
+   const wp=issues.some(i=>i.kind==='Wrong product');
+   openModal(wp?'Product mismatch detected':'Check before moving',`<div class="warn" style="${issues.length?'':'border-color:var(--c-wait);background:color-mix(in srgb,var(--c-wait) 9%,var(--card))'}"><div>${ico('warn','lg')}</div><div><h4>${wp?'⚠ Product mismatch detected':issues.length?'Exception detected':'Approval required'}</h4>${all.map(i=>`<p><b>${esc(i.kind)}:</b> ${esc(i.msg)}</p>`).join('')}</div></div><p class="muted" style="margin:12px 0 0">${approver?'As a supervisor you can override and record the movement. The override is written to the audit trail.':'This movement needs supervisor approval. The trolley stays where it is until it is approved.'}</p>`,`<button class="btn" data-act="closeModal">Go back and correct</button><button class="btn p" data-act="mvConfirm" data-o="${approver?1:0}">${approver?'Override and confirm':'Request supervisor approval'}</button>`);
+   return; }
+  doMove(m,false); });
+};
+function doMove(m,override){ const before=T(m.trolley).loc, s=locStats(); const r=submitMovement(m,{override}); if(!r.ok)return toast(r.error,'warn'); const s2=locStats();
+ UI.mv.last={trolley:m.trolley,from:m.from,to:m.to,pending:!!r.pending,fromAfter:s2[m.from]?s2[m.from].trolleys:0,toAfter:s2[m.to]?s2[m.to].trolleys:0};
+ toast(r.pending?`Approval requested for ${m.trolley}`:`${m.trolley} moved: ${lname(m.from)} → ${lname(m.to)}`,r.pending?'warn':''); chrome(); render(); }
+ACT.mvConfirm=el=>{ closeModal(); if(PENDING_M){ doMove(PENDING_M,el.dataset.o==='1'); PENDING_M=null; } };
+ACT.mvCancel=()=>{ const f=$('#mvForm'); f.reset(); $('#mvPrev').innerHTML='<div class="muted">Enter a trolley ID to see its current location, assigned material and any exceptions.</div>'; };
+
+/* ---------- Location tracking ---------- */
+const AREA={'STORE-01':'store','PROD-L01':'prod1','PROD-L02':'prod2','PROD-L03':'prod3','ASSY-01':'assy','QUALITY-01':'qual','MAINT-01':'maint','FG-01':'fg','PACK-01':'pack','DISPATCH-01':'disp'};
+function room(l,st){ const s=st[l.id], pct=Math.round(s.trolleys/l.cap*100), col=pct>=85?'var(--c-over)':pct>=60?'var(--c-wait)':'var(--c-avail)';
+ return `<button class="room ${UI.loc.sel===l.id?'sel':''}" style="--rc:${col};${AREA[l.id]?'grid-area:'+AREA[l.id]:''}" data-act="selLoc" data-id="${l.id}" aria-label="${l.name}, ${s.trolleys} trolleys"><div class="code">${l.id}</div><b>${l.name}</b><div class="ct"><span><strong>${s.trolleys}</strong> trolleys</span><span><strong>${s.units}</strong> units</span></div><div class="dots">${s.list.map(t=>`<i class="dot" title="${t.id} · ${eff(t)}" style="--c:var(--c-${SKEY[eff(t)]})"></i>`).join('')}</div><div class="small muted" style="margin-top:6px">${pct}% of ${l.cap} trolley bays</div></button>`; }
+PAGES.locations=()=>{ const st=locStats(); if(!UI.loc.sel)UI.loc.sel='PROD-L02'; const out=LOCS.find(l=>l.id==='OUT-01');
+ return `<div class="ph"><div><h1>Plant location tracking</h1><p>Each room shows the trolleys inside it right now. Select a location to list them.</p></div></div>${flow([1])}
+ <div class="card"><div class="cb"><div class="plant">${LOCS.filter(l=>l.id!=='OUT-01').map(l=>room(l,st)).join('')}</div>
+ <div class="small muted" style="margin:12px 0 4px">Beyond the plant gate</div><div class="outside">${room(out,st)}</div>
+ <div class="legend">${['Available','In Use','In Transit','Waiting','Maintenance','Overdue','Outside Plant'].map(s=>`<span><i style="--c:var(--c-${SKEY[s]})"></i>${s}</span>`).join('')}</div></div></div>
+ <div class="card mt" id="locDet">${locDetail()}</div>`; };
+function locDetail(){ const l=LOC[UI.loc.sel], st=locStats()[l.id], list=st.list.sort((a,b)=>b.lastMove-a.lastMove);
+ return `<div class="ch"><h3>${esc(l.name)} <span class="muted mono small">${l.id}</span></h3><span class="small muted">${st.trolleys} trolleys · ${st.units} units of material</span></div>${list.length?`<div class="tw"><table><thead><tr><th>Trolley ID</th><th>Type</th><th>Product / material</th><th>Qty</th><th>Status</th><th>Here for</th><th>Last operator</th></tr></thead><tbody>${list.map(t=>`<tr class="${eff(t)==='Overdue'?'late':''}"><td>${tid(t.id)}</td><td>${esc(t.type)}</td><td>${t.product?esc(pname(t.product)):'<span class="muted">Empty</span>'}</td><td>${t.qty||'—'}</td><td>${badge(eff(t))}</td><td>${dur(NOW()-t.since)}</td><td>${esc(t.operator)}</td></tr>`).join('')}</tbody></table></div>`:empty('No trolleys here','This location is empty at the moment.')}`; }
+ACT.selLoc=el=>{UI.loc.sel=el.dataset.id; const y=window.scrollY; render(); window.scrollTo(0,y); $('#locDet').scrollIntoView({behavior:'smooth',block:'nearest'});};
+
+/* ---------- History ---------- */
+function histFiltered(){ const f=UI.hist, from=f.from?new Date(f.from+'T00:00:00').getTime():0, to=f.to?new Date(f.to+'T23:59:59').getTime():Infinity, q=f.q.trim().toLowerCase(), tq=f.trolley.trim().toLowerCase();
+ return DB.movements.filter(r=>r.ts>=from&&r.ts<=to&&(!tq||r.trolley.toLowerCase().includes(tq))&&(!f.loc||r.from===f.loc||r.to===f.loc)&&(!f.operator||r.operator===f.operator)&&(!f.product||r.product===f.product)&&(!f.type||r.type===f.type)&&(!f.status||r.status===f.status)&&(!q||[r.id,r.trolley,lname(r.from),lname(r.to),pname(r.product),r.operator,r.type,r.reason].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.ts-a.ts); }
+const histCols=['Date','Time','Trolley ID','From location','To location','Product / material','Quantity','Operator','Movement type','Status'];
+const histRow=r=>[dt(r.ts),tm(r.ts),r.trolley,lname(r.from),lname(r.to),r.product?pname(r.product):'',r.qty,r.operator,r.type,r.status];
+function histRes(){ const l=histFiltered(), size=20, pages=Math.max(1,Math.ceil(l.length/size)); if(UI.hist.page>pages)UI.hist.page=pages; const s=l.slice((UI.hist.page-1)*size,UI.hist.page*size);
+ return (s.length?`<div class="tw"><table><thead><tr>${histCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${s.map(r=>`<tr><td class="nowrap">${dt(r.ts)}</td><td class="nowrap">${tm(r.ts)}</td><td>${tid(r.trolley)}</td><td>${esc(lname(r.from))}</td><td>${esc(lname(r.to))}</td><td>${r.product?esc(pname(r.product)):'<span class="muted">—</span>'}</td><td>${r.qty||'—'}</td><td>${esc(r.operator)}</td><td>${esc(r.type)}</td><td>${sbadge(r.status)}</td></tr>`).join('')}</tbody></table></div>`:empty('No movements match','Widen the date range or clear a filter.'))+pager(l.length,UI.hist.page,size,'hist'); }
+REFRESH.hist=()=>{const el=$('#histRes'); if(el)el.innerHTML=histRes();};
+PAGES.history=()=>{ const f=UI.hist;
+ return `<div class="ph"><div><h1>Trolley movement history</h1><p>Every move, who did it and where it went. Nothing is overwritten.</p></div><div class="acts"><button class="btn" data-act="histXlsx">${ico('download')}Export Excel</button><button class="btn" data-act="histPdf">${ico('file')}Export PDF</button></div></div>${flow([5])}
+ <div class="card"><div class="tools"><input class="grow" data-ui="hist.q" value="${esc(f.q)}" placeholder="Search trolley, location, product, operator" aria-label="Search history"><button class="btn p" data-act="histSearch">${ico('search')}Search</button><button class="btn" data-act="histFilters">${ico('filter')}Filter</button><button class="btn ghost" data-act="histReset">Reset</button></div>
+ <div class="tools" id="histF" style="${f.filters?'':'display:none'}"><div class="fld"><label>From date</label><input type="date" data-ui="hist.from" value="${f.from}"></div><div class="fld"><label>To date</label><input type="date" data-ui="hist.to" value="${f.to}"></div><div class="fld"><label>Trolley ID</label><input data-ui="hist.trolley" value="${esc(f.trolley)}" placeholder="TR-001" class="mono"></div><div class="fld"><label>Location</label><select data-ui="hist.loc">${locOpts(f.loc,'Any location')}</select></div><div class="fld"><label>Operator</label><select data-ui="hist.operator"><option value="">Any operator</option>${OPS.map(o=>`<option ${f.operator===o?'selected':''}>${o}</option>`).join('')}</select></div><div class="fld"><label>Product</label><select data-ui="hist.product">${prodOpts(f.product,'Any product')}</select></div><div class="fld"><label>Movement type</label><select data-ui="hist.type"><option value="">Any type</option>${MTYPES.map(o=>`<option ${f.type===o?'selected':''}>${o}</option>`).join('')}</select></div><div class="fld"><label>Status</label><select data-ui="hist.status"><option value="">Any status</option>${['Completed','In Transit','Pending Approval','Rejected','Correction Requested'].map(o=>`<option ${f.status===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
+ <div id="histRes">${histRes()}</div></div>`; };
+ACT.histSearch=()=>{UI.hist.page=1;REFRESH.hist()};
+ACT.histFilters=()=>{UI.hist.filters=!UI.hist.filters;$('#histF').style.display=UI.hist.filters?'':'none'};
+ACT.histReset=()=>{UI.hist={...UI.hist,q:'',from:'',to:'',trolley:'',loc:'',operator:'',product:'',type:'',status:'',page:1};render()};
+ACT.histXlsx=()=>exportXlsx('trolley-movement-history',histCols,histFiltered().map(histRow));
+ACT.histPdf=()=>exportPdf('trolley-movement-history','Trolley movement history',histCols,histFiltered().slice(0,400).map(histRow));
+
+/* ---------- Products & materials ---------- */
+const FLAGS=['Wrong trolley','Wrong product','Wrong location','Mixed batch','Unassigned trolley'];
+function prodRows(){ const f=UI.prod,q=f.q.trim().toLowerCase();
+ return DB.trolleys.filter(t=>t.active&&(t.product||flagsOf(t).length)).map(t=>({t,flags:flagsOf(t)})).filter(r=>(!f.flag||(f.flag==='any'?r.flags.length:r.flags.includes(f.flag)))&&(!q||[r.t.id,pname(r.t.product),r.t.product,r.t.batch,lname(r.t.loc)].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.flags.length-a.flags.length||a.t.id.localeCompare(b.t.id)); }
+function prodRes(){ const l=prodRows(), size=20, pages=Math.max(1,Math.ceil(l.length/size)); if(UI.prod.page>pages)UI.prod.page=pages; const s=l.slice((UI.prod.page-1)*size,UI.prod.page*size);
+ return (s.length?`<div class="tw"><table><thead><tr><th>Product name</th><th>Product code</th><th>Batch number</th><th>Trolley ID</th><th>Quantity</th><th>Current location</th><th>Status</th><th>Segregation check</th></tr></thead><tbody>${s.map(({t,flags})=>`<tr class="${flags.length?'late':''}"><td>${t.product?esc(pname(t.product)):'<span class="muted">No product assigned</span>'}</td><td class="mono small">${t.product||'—'}</td><td class="mono small">${esc(t.batch)||'—'}</td><td>${tid(t.id)}<div class="small muted">${esc(t.type)}</div></td><td>${t.qty?t.qty+' '+PROD[t.product].uom:'—'}</td><td>${esc(lname(t.loc))}</td><td>${badge(eff(t))}</td><td>${flags.length?flagChips(t):'<span class="chip g">'+ico('check','sm')+'Verified</span>'}</td></tr>`).join('')}</tbody></table></div>`:empty('No assignments match','Change the search or warning filter.'))+pager(l.length,UI.prod.page,size,'prod'); }
+REFRESH.prod=()=>{const el=$('#prodRes'); if(el)el.innerHTML=prodRes();};
+PAGES.products=()=>{ const f=UI.prod, mism=DB.approvals.filter(a=>a.status==='Pending'&&a.type==='Product mismatch'), ap=hasPerm('approve');
+ const sums=PRODUCTS.map(p=>{const ts=DB.trolleys.filter(t=>t.active&&t.product===p.code);return {p,n:ts.length,q:ts.reduce((a,t)=>a+t.qty,0),g:[...new Set(ts.map(t=>grp(t.loc)))]}});
+ const wcount=DB.trolleys.filter(t=>t.active&&flagsOf(t).length).length;
+ return `<div class="ph"><div><h1>Product & material segregation</h1><p>Each trolley carries one product and batch. Scans that do not match are stopped and sent to a supervisor.</p></div></div>${flow([3])}
+ ${mism.map(a=>`<div class="warn" style="margin-bottom:12px"><div>${ico('warn','lg')}</div><div style="flex:1"><h4>⚠ Product mismatch detected</h4><p>${esc(a.remarks)}</p><p class="small">Requested by ${esc(a.requestedBy)} · ${ago(a.requestedAt)}. Supervisor approval is required before this trolley is used.</p></div>${ap?`<div class="acts"><button class="btn sm g" data-act="decide" data-id="${a.id}" data-d="approve">Approve</button><button class="btn sm d" data-act="decide" data-id="${a.id}" data-d="reject">Reject</button></div>`:`<span class="chip w">Awaiting supervisor</span>`}</div>`).join('')}
+ <div class="grid g12"><div class="card"><div class="ch"><h3>Verify a scan</h3></div><div class="cb"><div class="fld"><label for="vfT">Trolley ID</label><input id="vfT" class="mono" list="tl2" placeholder="TR-024" autocomplete="off"><datalist id="tl2">${DB.trolleys.filter(t=>t.active).map(t=>`<option value="${t.id}">`).join('')}</datalist></div><div class="fld mt"><label for="vfP">Product scanned</label><select id="vfP">${prodOpts('')}</select></div><button class="btn p mt" data-act="verify" style="width:100%;justify-content:center">${ico('shield')}Verify scan</button><div id="vfOut" class="mt"></div></div></div>
+ <div class="card"><div class="ch"><h3>Products in the plant</h3><span class="small muted">${wcount} trolley${wcount===1?'':'s'} with warnings</span></div><div class="tw"><table><thead><tr><th>Code</th><th>Product</th><th>Batch</th><th>Trolleys</th><th>Units</th><th>Held at</th></tr></thead><tbody>${sums.map(s=>`<tr><td class="mono small">${s.p.code}</td><td>${esc(s.p.name)}</td><td class="mono small">${s.p.batch}</td><td>${s.n}</td><td>${s.q} ${s.p.uom}</td><td class="small">${s.g.join(', ')||'—'}</td></tr>`).join('')}</tbody></table></div></div></div>
+ <div class="card mt"><div class="ch"><h3>Trolley assignments</h3></div><div class="tools"><input class="grow" data-ui="prod.q" value="${esc(f.q)}" placeholder="Search trolley, product, batch" aria-label="Search assignments"><select data-ui="prod.flag" aria-label="Warning"><option value="">All trolleys</option><option value="any" ${f.flag==='any'?'selected':''}>Any warning</option>${FLAGS.map(x=>`<option ${f.flag===x?'selected':''}>${x}</option>`).join('')}</select></div><div id="prodRes">${prodRes()}</div></div>`; };
+ACT.verify=()=>{ const id=$('#vfT').value.trim().toUpperCase(), p=$('#vfP').value, r=verifyScan(id,p), o=$('#vfOut');
+ if(r.error){o.innerHTML=`<div class="err">${esc(r.error)}</div>`;return}
+ UI.vlast={id,p,issues:r.issues};
+ o.innerHTML=r.ok?`<div class="warn" style="border-color:var(--c-avail);background:color-mix(in srgb,var(--c-avail) 9%,var(--card))"><div style="color:var(--c-avail)">${ico('check','lg')}</div><div><h4>Match confirmed</h4><p>${id} carries ${esc(pname(p))}. Safe to proceed.</p></div></div>`
+ :`<div class="warn"><div>${ico('warn','lg')}</div><div><h4>⚠ ${r.issues[0].kind==='Wrong product'?'Product mismatch detected':'Check failed'}</h4>${r.issues.map(i=>`<p>${esc(i.msg)}</p>`).join('')}<div class="acts" style="margin-top:10px"><button class="btn sm p" data-act="reqMismatch">Request supervisor approval</button></div></div></div>`; };
+ACT.reqMismatch=()=>{ const v=UI.vlast; if(!v)return; const t=T(v.id), msg=v.issues.map(i=>i.msg).join(' ');
+ raiseAlert({type:v.issues.some(i=>i.kind==='Wrong location')&&!v.issues.some(i=>i.kind==='Wrong product')?'Wrong location':'Wrong product',trolley:v.id,loc:t.loc,priority:'Critical',msg});
+ if(!DB.approvals.some(a=>a.status==='Pending'&&a.trolley===v.id&&a.type==='Product mismatch')){ DB.approvals.unshift({id:'AP-'+(++DB.seq.ap),type:'Product mismatch',trolley:v.id,from:t.loc,to:t.loc,requestedBy:me().name,requestedAt:NOW(),status:'Pending',decidedBy:'',decidedAt:null,remarks:msg,payload:null,issues:v.issues.map(i=>i.kind)}); logAudit('Product mismatch flagged',v.id,pname(t.product),pname(v.p)+' scanned'); }
+ save(); toast('Supervisor approval requested for '+v.id,'warn'); chrome(); render(); };
+/* ====================== PAGES: alerts / approvals / reports / analytics / settings + init ====================== */
+const ATYPES=['Trolley overdue','Trolley missing','Wrong location','Wrong product','Outside plant','Movement not completed','Trolley maintenance due','Unauthorized movement'];
+const PRI=['Critical','High','Medium','Low'];
+function alertsFiltered(){ const f=UI.alerts; const po={Critical:0,High:1,Medium:2,Low:3}; return DB.alerts.filter(a=>(!f.status||(f.status==='Active'?a.status!=='Resolved':a.status===f.status))&&(!f.priority||a.priority===f.priority)&&(!f.type||a.type===f.type)).sort((a,b)=>(a.status==='Resolved')-(b.status==='Resolved')||po[a.priority]-po[b.priority]||b.ts-a.ts); }
+function alertsRes(){ const l=alertsFiltered(), size=15, pages=Math.max(1,Math.ceil(l.length/size)); if(UI.alerts.page>pages)UI.alerts.page=pages; const s=l.slice((UI.alerts.page-1)*size,UI.alerts.page*size), can=hasPerm('alert');
+ return (s.length?`<div class="tw"><table><thead><tr><th>Priority</th><th>Alert type</th><th>Trolley ID</th><th>Location</th><th>Time</th><th>Status</th><th></th></tr></thead><tbody>${s.map(a=>`<tr class="${a.priority==='Critical'&&a.status!=='Resolved'?'late':''}" style="${a.status==='Resolved'?'opacity:.62':''}"><td>${prBadge(a.priority)}</td><td><b>${esc(a.type)}</b><div class="small muted" style="max-width:46ch">${esc(a.msg)}</div></td><td>${tid(a.trolley)}</td><td>${esc(lname(a.loc))}</td><td class="nowrap">${tm(a.ts)}<div class="small muted">${ago(a.ts)}</div></td><td><span class="bd s-${a.status==='Open'?'over':a.status==='Acknowledged'?'wait':'avail'}">${a.status}</span>${a.resolvedBy?`<div class="small muted">by ${esc(a.resolvedBy)}</div>`:a.ackBy?`<div class="small muted">by ${esc(a.ackBy)}</div>`:''}</td><td class="nowrap">${a.status==='Open'&&can?`<button class="btn sm" data-act="ack" data-id="${a.id}">Acknowledge</button> `:''}<button class="btn sm" data-act="open" data-id="${a.trolley}">View trolley</button>${a.status!=='Resolved'&&can?` <button class="btn sm g" data-act="resolveA" data-id="${a.id}">Resolve</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:empty('No alerts match','Nothing to show for this filter.'))+pager(l.length,UI.alerts.page,size,'alerts'); }
+REFRESH.alerts=()=>{const el=$('#alertsRes'); if(el)el.innerHTML=alertsRes();};
+PAGES.alerts=()=>{ const f=UI.alerts, act=DB.alerts.filter(a=>a.status!=='Resolved');
+ return `<div class="ph"><div><h1>Alerts center</h1><p>Exceptions are raised the moment they happen, ranked by priority, and stay open until someone resolves them.</p></div></div>${flow([4])}
+ <div class="card"><div class="sum">${PRI.map(p=>`<button class="${f.priority===p?'on':''}" data-act="alPri" data-p="${p}"><b>${act.filter(a=>a.priority===p).length}</b>${prBadge(p)}</button>`).join('')}<button class="${f.status==='Resolved'?'on':''}" data-act="alRes"><b>${DB.alerts.filter(a=>a.status==='Resolved').length}</b><span class="small muted">Resolved</span></button></div>
+ <div class="tools"><select data-ui="alerts.status" aria-label="Status"><option value="">All statuses</option><option value="Active" ${f.status==='Active'?'selected':''}>Active (open and acknowledged)</option>${['Open','Acknowledged','Resolved'].map(x=>`<option ${f.status===x?'selected':''}>${x}</option>`).join('')}</select><select data-ui="alerts.priority" aria-label="Priority"><option value="">All priorities</option>${PRI.map(x=>`<option ${f.priority===x?'selected':''}>${x}</option>`).join('')}</select><select data-ui="alerts.type" aria-label="Type"><option value="">All alert types</option>${ATYPES.map(x=>`<option ${f.type===x?'selected':''}>${x}</option>`).join('')}</select>${(f.status||f.priority||f.type)?`<button class="btn" data-act="alClear">Clear</button>`:''}</div><div id="alertsRes">${alertsRes()}</div></div>`; };
+ACT.alPri=el=>{UI.alerts.priority=UI.alerts.priority===el.dataset.p?'':el.dataset.p;UI.alerts.page=1;render()};
+ACT.alRes=()=>{UI.alerts.status=UI.alerts.status==='Resolved'?'':'Resolved';UI.alerts.page=1;render()};
+ACT.alClear=()=>{UI.alerts={status:'',priority:'',type:'',page:1};render()};
+ACT.ack=el=>{const a=DB.alerts.find(x=>x.id===el.dataset.id);a.status='Acknowledged';a.ackBy=me().name;logAudit('Alert acknowledged',a.trolley,'Open','Acknowledged');save();toast(`${a.type} on ${a.trolley} acknowledged`);afterChange()};
+ACT.resolveA=el=>{const a=DB.alerts.find(x=>x.id===el.dataset.id);a.status='Resolved';a.resolvedBy=me().name;a.resolvedAt=NOW();logAudit('Alert resolved',a.trolley,a.status==='Resolved'?'Open':'',a.type);save();toast(`${a.type} on ${a.trolley} resolved`);afterChange()};
+
+/* ---------- approvals ---------- */
+PAGES.approvals=()=>{ const pend=DB.approvals.filter(a=>a.status==='Pending'), hist=DB.approvals.filter(a=>a.status!=='Pending').sort((a,b)=>b.decidedAt-a.decidedAt), ap=hasPerm('approve');
+ return `<div class="ph"><div><h1>Movement approval</h1><p>Outside plant moves and mismatched scans wait here for a supervisor. The trolley stays put until a decision is made.</p></div></div>
+ <h3 style="margin-bottom:10px">Pending approval <span class="chip w">${pend.length}</span></h3>
+ ${pend.length?`<div class="grid g2">${pend.map(a=>`<div class="apc"><div class="row"><div><b class="big" style="font-size:19px">${tid(a.trolley)}</b> <span class="muted">${esc(a.type)}</span></div><span class="bd s-wait">Pending approval</span></div><div class="route">${esc(lname(a.from))}${a.from!==a.to?`${ico('arrow','sm')}${esc(lname(a.to))}`:''}</div><div class="small muted">Requested by <b style="color:var(--ink)">${esc(a.requestedBy)}</b> · ${dt(a.requestedAt)}, ${tm(a.requestedAt)} · ${ago(a.requestedAt)}</div>${a.remarks?`<p style="margin:8px 0 0">${esc(a.remarks)}</p>`:''}${ap?`<div class="acts" style="margin-top:12px"><button class="btn g" data-act="decide" data-id="${a.id}" data-d="approve">${ico('check')}Approve</button><button class="btn d" data-act="decide" data-id="${a.id}" data-d="reject">${ico('x')}Reject</button><button class="btn" data-act="decide" data-id="${a.id}" data-d="correct">Request correction</button></div>`:`<div class="small muted" style="margin-top:10px">Only a supervisor, plant manager or admin can decide this request.</div>`}</div>`).join('')}</div>`:`<div class="card">${empty('Nothing waiting','New requests appear here as soon as an operator submits one.')}</div>`}
+ <div class="card mt"><div class="ch"><h3>Approval history</h3></div>${hist.length?`<div class="tw"><table><thead><tr><th>Trolley ID</th><th>Request</th><th>Route</th><th>Requested by</th><th>Decision</th><th>Approved / decided by</th><th>Date</th><th>Time</th><th>Remarks</th></tr></thead><tbody>${hist.map(a=>`<tr><td>${tid(a.trolley)}</td><td>${esc(a.type)}</td><td>${esc(lname(a.from))}${a.from!==a.to?' → '+esc(lname(a.to)):''}</td><td>${esc(a.requestedBy)}</td><td>${sbadge(a.status)}</td><td>${esc(a.decidedBy)}</td><td class="nowrap">${dt(a.decidedAt)}</td><td class="nowrap">${tm(a.decidedAt)}</td><td style="max-width:36ch">${esc(a.remarks)}</td></tr>`).join('')}</tbody></table></div>`:empty('No decisions yet','Decisions will be logged here.')}</div>`; };
+ACT.decide=el=>{ if(!hasPerm('approve'))return toast('Your role cannot decide approvals','warn'); const a=DB.approvals.find(x=>x.id===el.dataset.id), d=el.dataset.d, L={approve:'Approve',reject:'Reject',correct:'Request correction'}[d];
+ openModal(`${L} · ${a.trolley}`,`<p style="margin:0 0 10px">${esc(a.type)}: ${esc(lname(a.from))}${a.from!==a.to?' → '+esc(lname(a.to)):''}, requested by ${esc(a.requestedBy)}.</p><div class="fld"><label for="dr">Remarks${d==='approve'?' (optional)':' (required)'}</label><textarea id="dr" rows="3" placeholder="${d==='approve'?'Gate pass checked':'Tell the requester what to fix'}"></textarea><div class="err" id="drE"></div></div>`,`<button class="btn" data-act="closeModal">Cancel</button><button class="btn ${d==='approve'?'g':d==='reject'?'d':'p'}" data-act="doDecide" data-id="${a.id}" data-d="${d}">${L}</button>`); };
+ACT.doDecide=el=>{ const r=$('#dr').value.trim(), d=el.dataset.d; if(d!=='approve'&&!r){$('#drE').textContent='Add a remark so the requester knows why.';return} const res=decideApproval(el.dataset.id,d,r); closeModal(); if(res.ok){toast(`${res.approval.trolley}: ${res.approval.status.toLowerCase()}`,d==='approve'?'':'warn'); afterChange();} };
+
+/* ---------- reports ---------- */
+function repData(k){ const now=NOW(), day0=new Date().setHours(0,0,0,0);
+ const R={
+ daily:()=>({title:'Daily trolley movement report',cols:['Time','Trolley ID','From','To','Product','Qty','Operator','Type','Status'],rows:DB.movements.filter(r=>r.ts>=day0).sort((a,b)=>a.ts-b.ts).map(r=>[tm(r.ts),r.trolley,lname(r.from),lname(r.to),r.product?pname(r.product):'',r.qty,r.operator,r.type,r.status])}),
+ util:()=>({title:'Trolley utilization report',cols:['Trolley type','Total','Available','In use','In transit / waiting','Maintenance','Outside plant','Overdue','Utilization %'],rows:TTYPES.map(ty=>{const l=DB.trolleys.filter(t=>t.active&&t.type===ty),n=s=>l.filter(t=>eff(t)===s).length;const busy=l.length-n('Available')-n('Maintenance');return [ty,l.length,n('Available'),n('In Use'),n('In Transit')+n('Waiting'),n('Maintenance'),n('Outside Plant'),n('Overdue'),l.length?Math.round(busy/l.length*100)+'%':'0%']})}),
+ loc:()=>{const s=locStats();return {title:'Location-wise trolley report',cols:['Location code','Location','Trolleys','Units of material','Bay usage %','Longest stay'],rows:LOCS.map(l=>[l.id,l.name,s[l.id].trolleys,s[l.id].units,Math.round(s[l.id].trolleys/l.cap*100)+'%',s[l.id].list.length?dur(Math.max(...s[l.id].list.map(t=>now-t.since))):'—'])}},
+ prod:()=>({title:'Product-wise trolley report',cols:['Code','Product','Batch','Trolleys','Units','Held at'],rows:PRODUCTS.map(p=>{const ts=DB.trolleys.filter(t=>t.active&&t.product===p.code);return [p.code,p.name,p.batch,ts.length,ts.reduce((a,t)=>a+t.qty,0),[...new Set(ts.map(t=>grp(t.loc)))].join(', ')]})}),
+ over:()=>({title:'Overdue trolley report',cols:['Trolley ID','Location','Expected return','At location for','Delay','Department','Assigned person'],rows:DB.trolleys.filter(t=>t.active&&eff(t)==='Overdue').sort((a,b)=>a.expected-b.expected).map(t=>[t.id,lname(t.loc),tm(t.expected),dur(now-t.since),dur(now-t.expected),GDEPT[grp(t.loc)],t.operator])}),
+ hist:()=>({title:'Trolley history report (all movements)',cols:histCols,rows:DB.movements.slice().sort((a,b)=>b.ts-a.ts).slice(0,500).map(histRow)}),
+ out:()=>({title:'Outside plant trolley report',cols:['Trolley ID','Product','Qty','Out since','Time outside','Expected return','Approved by'],rows:DB.trolleys.filter(t=>t.active&&t.loc==='OUT-01').map(t=>{const a=DB.approvals.find(x=>x.trolley===t.id&&x.status==='Approved');return [t.id,t.product?pname(t.product):'Empty',t.qty,dtm(t.since),dur(now-t.since),t.expected?dtm(t.expected):'',a?a.decidedBy:'']})}),
+ exc:()=>({title:'Movement exception report',cols:['Raised','Type','Trolley ID','Location','Priority','Status','Detail'],rows:DB.alerts.filter(a=>['Wrong location','Wrong product','Unauthorized movement','Trolley missing','Movement not completed'].includes(a.type)).sort((a,b)=>b.ts-a.ts).map(a=>[dtm(a.ts),a.type,a.trolley,lname(a.loc),a.priority,a.status,a.msg])})};
+ return R[k](); }
+const REPS=[['daily','Daily Trolley Movement Report','Every movement recorded today, in time order.'],['util','Trolley Utilization Report','Share of each trolley type that is busy, idle or out of service.'],['loc','Location-wise Trolley Report','Trolleys, material and longest stay at each plant location.'],['prod','Product-wise Trolley Report','Which trolleys hold each product, and where.'],['over','Overdue Trolley Report','Trolleys past their expected return, with the delay.'],['hist','Trolley History Report','Full movement trail across all trolleys.'],['out','Outside Plant Trolley Report','Trolleys away from the plant and when they are due back.'],['exc','Movement Exception Report','Wrong location, wrong product, missing and unauthorized movements.']];
+PAGES.reports=()=>`<div class="ph"><div><h1>Reports & analytics</h1><p>Management reports from the live data. Download as Excel or PDF.</p></div><div class="acts"><button class="btn" data-act="go" data-p="analytics">${ico('chart')}Open analytics</button></div></div>${flow([6])}
+ <div class="grid g3" style="grid-template-columns:repeat(auto-fill,minmax(270px,1fr))">${REPS.map(r=>`<div class="card"><div class="rep"><div class="ib">${ico('file')}</div><h3>${r[1]}</h3><p>${r[2]}</p><div class="acts"><button class="btn sm p" data-act="viewRep" data-k="${r[0]}">${ico('eye','sm')}View report</button><button class="btn sm" data-act="repX" data-k="${r[0]}">${ico('download','sm')}Excel</button><button class="btn sm" data-act="repP" data-k="${r[0]}">${ico('download','sm')}PDF</button></div></div></div>`).join('')}</div>`;
+ACT.viewRep=el=>{ const d=repData(el.dataset.k); openModal(d.title,`<div class="small muted" style="margin-bottom:8px">${d.rows.length} row${d.rows.length===1?'':'s'} · generated ${dtm(NOW())}</div>${d.rows.length?`<div class="tw" style="max-height:56vh"><table><thead><tr>${d.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${d.rows.slice(0,150).map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${d.rows.length>150?`<div class="small muted" style="margin-top:6px">Showing the first 150 rows. Downloads include everything.</div>`:''}`:empty('No rows','Nothing to report for this period yet.')}`,`<button class="btn" data-act="closeModal">Close</button><button class="btn" data-act="repX" data-k="${el.dataset.k}">${ico('download')}Download Excel</button><button class="btn p" data-act="repP" data-k="${el.dataset.k}">${ico('download')}Download PDF</button>`,true); };
+ACT.repX=el=>{const d=repData(el.dataset.k);exportXlsx(d.title.toLowerCase().replace(/[^a-z0-9]+/g,'-'),d.cols,d.rows)};
+ACT.repP=el=>{const d=repData(el.dataset.k);exportPdf(d.title.toLowerCase().replace(/[^a-z0-9]+/g,'-'),d.title,d.cols,d.rows.slice(0,400))};
+
+/* ---------- analytics ---------- */
+UI.an={over:'day'};
+const cv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888';
+function series(seed,n,base,amp){const R=rng(seed);return Array.from({length:n},(_,i)=>Math.round(base+amp*(R()-.5)*2+(i%7>4?-amp*.8:0)))}
+const dayLbl=n=>Array.from({length:n},(_,i)=>{const d=new Date(NOW()-(n-1-i)*86400000);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})});
+PAGES.analytics=()=>`<div class="ph"><div><h1>Analytics</h1><p>Demo analytics: fleet counts use browser data; historical trends and turnaround figures include simulated values.</p></div></div>${flow([6])}
+ <div class="grid g2"><div class="card"><div class="ch"><h3>Trolley utilization</h3><span class="small muted">Live fleet split</span></div><div class="cb"><div class="chartbox"><canvas id="c1" role="img" aria-label="Utilization chart"></canvas></div></div></div>
+ <div class="card"><div class="ch"><h3>Movement by location</h3><span class="small muted">Arrivals, last 24 hours</span></div><div class="cb"><div class="chartbox"><canvas id="c2" role="img" aria-label="Movement by location"></canvas></div></div></div>
+ <div class="card"><div class="ch"><h3>Daily movement trend</h3><span class="small muted">Trolley movements per day</span></div><div class="cb"><div class="chartbox"><canvas id="c3" role="img" aria-label="Daily movement trend"></canvas></div></div></div>
+ <div class="card"><div class="ch"><h3>Top trolley usage</h3><span class="small muted">Most frequently used</span></div><div class="cb"><div class="chartbox"><canvas id="c4" role="img" aria-label="Top trolley usage"></canvas></div></div></div>
+ <div class="card"><div class="ch"><h3>Average turnaround time</h3><span class="small muted">Hours from issue to return</span></div><div class="cb"><div class="chartbox"><canvas id="c5" role="img" aria-label="Turnaround time"></canvas></div></div></div>
+ <div class="card"><div class="ch"><h3>Overdue trolley trend</h3><span class="acts"><button class="btn sm ${UI.an.over==='day'?'p':''}" data-act="anOver" data-v="day">Daily</button><button class="btn sm ${UI.an.over==='week'?'p':''}" data-act="anOver" data-v="week">Weekly</button></span></div><div class="cb"><div class="chartbox"><canvas id="c6" role="img" aria-label="Overdue trend"></canvas></div></div></div>
+ <div class="card" style="grid-column:1/-1"><div class="ch"><h3>Location-wise trolley distribution</h3><span class="small muted">Trolleys present right now</span></div><div class="cb"><div class="chartbox"><canvas id="c7" role="img" aria-label="Location distribution"></canvas></div></div></div></div>`;
+ACT.anOver=el=>{UI.an.over=el.dataset.v;render()};
+AFTER.analytics=()=>{
+ if(typeof Chart==='undefined'){ $$('.chartbox').forEach(b=>b.innerHTML='<div class="empty">Charts need the Chart.js library from cdnjs. Check your connection and reload.</div>'); return; }
+ const ink=cv('--ink2'),grid=cv('--line2'); Chart.defaults.font.family="'IBM Plex Sans',system-ui,sans-serif"; Chart.defaults.color=ink;
+ const mk=(id,cfg)=>{CHARTS[id]=new Chart($('#'+id),cfg)}, c=counts();
+ const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},beginAtZero:true}}};
+ mk('c1',{type:'doughnut',data:{labels:['Available','In use','In transit / waiting','Maintenance','Overdue','Outside plant'],datasets:[{data:[c.avail,c.use,c.transit+c.wait,c.maint,c.over,c.out],backgroundColor:[cv('--c-avail'),cv('--c-use'),cv('--c-transit'),cv('--c-maint'),cv('--c-over'),cv('--c-out')],borderColor:cv('--card'),borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right',labels:{boxWidth:10,usePointStyle:true}}}}});
+ const G=['Store','Production','Assembly','Quality','Packing','Finished Goods','Dispatch','Maintenance','Outside Plant'], baseM={Store:34,Production:61,Assembly:28,Quality:42,Packing:35,'Finished Goods':22,Dispatch:26,Maintenance:5,'Outside Plant':8}, act={}; movesIn24h().forEach(r=>{const g=grp(r.to);act[g]=(act[g]||0)+1});
+ mk('c2',{type:'bar',data:{labels:G,datasets:[{data:G.map(g=>Math.round(baseM[g]*0.6)+(act[g]||0)),backgroundColor:cv('--accent'),borderRadius:5}]},options:{...base,scales:{...base.scales,x:{grid:{display:false},ticks:{maxRotation:40,autoRotate:true}}}}});
+ const todayMv=DB.movements.filter(r=>r.ts>=new Date().setHours(0,0,0,0)&&r.status!=='Pending Approval').length, d3=series(31,14,96,22); d3[13]=Math.max(d3[13]*0.5|0,0)+todayMv;
+ mk('c3',{type:'line',data:{labels:dayLbl(14),datasets:[{data:d3,borderColor:cv('--accent'),backgroundColor:cv('--accent')+'22',fill:true,tension:.3,pointRadius:3}]},options:base});
+ const top=DB.trolleys.slice().sort((a,b)=>b.uses-a.uses).slice(0,8);
+ mk('c4',{type:'bar',data:{labels:top.map(t=>t.id),datasets:[{data:top.map(t=>t.uses),backgroundColor:cv('--c-transit'),borderRadius:5}]},options:{...base,indexAxis:'y',scales:{x:{grid:{color:grid},beginAtZero:true},y:{grid:{display:false}}}}});
+ const act2=DB.trolleys.filter(t=>t.active&&['In Use','Overdue'].includes(eff(t))), avgNow=act2.length?+(act2.reduce((a,t)=>a+(NOW()-t.since),0)/act2.length/HR).toFixed(1):0, d5=series(53,14,3.6,.7).map(v=>+v.toFixed(1)); d5[13]=avgNow;
+ mk('c5',{type:'line',data:{labels:dayLbl(14),datasets:[{data:d5,borderColor:cv('--c-wait'),backgroundColor:cv('--c-wait')+'22',fill:true,tension:.3,pointRadius:3}]},options:base});
+ let d6=series(77,14,6,4).map(v=>Math.max(1,v)); d6[13]=c.over; let l6=dayLbl(14);
+ if(UI.an.over==='week'){ const w=[0,1,2,3].map(i=>Math.round(d6.slice(i*3.5|0,(i+1)*3.5|0).reduce((a,b)=>a+b,0)/Math.max(1,d6.slice(i*3.5|0,(i+1)*3.5|0).length))); w[3]=Math.round((d6[10]+d6[11]+d6[12]+d6[13])/4); d6=w; l6=['3 weeks ago','2 weeks ago','Last week','This week']; }
+ mk('c6',{type:'line',data:{labels:l6,datasets:[{data:d6,borderColor:cv('--c-over'),backgroundColor:cv('--c-over')+'22',fill:true,tension:.3,pointRadius:3}]},options:{...base,scales:{...base.scales,y:{grid:{color:grid},beginAtZero:true,ticks:{precision:0}}}}});
+ const st=locStats(); mk('c7',{type:'bar',data:{labels:LOCS.map(l=>l.name),datasets:[{data:LOCS.map(l=>st[l.id].trolleys),backgroundColor:LOCS.map(l=>l.id==='OUT-01'?cv('--c-out'):cv('--accent')),borderRadius:5}]},options:{...base,scales:{...base.scales,x:{grid:{display:false},ticks:{maxRotation:40}}}}});
+};
+
+/* ---------- settings ---------- */
+UI.audit={q:'',page:1};
+function auditRes(){ const q=UI.audit.q.trim().toLowerCase(), l=DB.audit.filter(a=>!q||[a.trolley,a.user,a.action,a.prev,a.next].join(' ').toLowerCase().includes(q)), size=12, pages=Math.max(1,Math.ceil(l.length/size)); if(UI.audit.page>pages)UI.audit.page=pages; const s=l.slice((UI.audit.page-1)*size,UI.audit.page*size);
+ return (s.length?`<div class="tw"><table><thead><tr><th>Date</th><th>Time</th><th>User</th><th>Action</th><th>Trolley ID</th><th>Previous value</th><th>New value</th></tr></thead><tbody>${s.map(a=>`<tr><td class="nowrap">${dt(a.ts)}</td><td class="nowrap">${tm(a.ts)}</td><td>${esc(a.user)}<div class="small muted">${esc(a.role)}</div></td><td>${esc(a.action)}</td><td>${a.trolley?tid(a.trolley):''}</td><td>${esc(a.prev)}</td><td>${esc(a.next)}</td></tr>`).join('')}</tbody></table></div>`:empty('No audit entries','Actions will be recorded here.'))+pager(l.length,UI.audit.page,size,'audit'); }
+REFRESH.audit=()=>{const el=$('#auditRes'); if(el)el.innerHTML=auditRes();};
+PAGES.settings=()=>{ let th='auto'; try{th=localStorage.getItem('stms-theme')||'auto'}catch(e){}
+ return `<div class="ph"><div><h1>Settings</h1><p>Roles, approval rules, appearance and the full audit trail.</p></div></div>
+ <div class="grid g2"><div class="card"><div class="ch"><h3>Approval rules</h3></div><div class="cb"><label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" data-act="setting" data-k="outsideApproval" ${DB.settings.outsideApproval?'checked':''} style="margin-top:4px"><span><b>Outside plant movements need approval</b><br><span class="muted small">Operators, quality and store users request it. Supervisors, managers and admins can move directly.</span></span></label><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" data-act="setting" data-k="mismatchApproval" ${DB.settings.mismatchApproval?'checked':''} style="margin-top:4px"><span><b>Mismatches need supervisor approval</b><br><span class="muted small">Wrong product, wrong trolley, wrong location and unassigned loads are held until approved.</span></span></label>
+  <h4 style="margin:18px 0 8px">Appearance</h4><div class="acts">${['auto','light','dark'].map(x=>`<button class="btn sm ${th===x?'p':''}" data-act="theme" data-v="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div>
+  <h4 style="margin:18px 0 8px">Demo data</h4><p class="muted small" style="margin:0 0 8px">Everything is stored in this browser. Reset restores the 128-trolley sample plant.</p><button class="btn d" data-act="resetData">Reset demo data</button></div></div>
+ <div class="card"><div class="ch"><h3>Roles and access</h3></div><div class="tw"><table><thead><tr><th>Role</th><th>Can do</th><th>Pages</th></tr></thead><tbody>${Object.keys(ROLES).map(r=>`<tr><td><b>${r}</b><div class="small muted">${USERS[r]}</div></td><td class="small" style="max-width:34ch">${ROLES[r].blurb}</td><td class="small">${ROLES[r].pages.length} of ${ALL_PAGES.length}</td></tr>`).join('')}</tbody></table></div></div></div>
+ <div class="card mt"><div class="ch"><h3>Audit trail</h3><span class="small muted">Who changed what, and when</span></div><div class="tools"><input class="grow" data-ui="audit.q" value="${esc(UI.audit.q)}" placeholder="Search by trolley, user or action" aria-label="Search audit"></div><div id="auditRes">${auditRes()}</div></div>`; };
+ACT.setting=el=>{DB.settings[el.dataset.k]=el.checked;logAudit('Setting changed',el.dataset.k,String(!el.checked),String(el.checked));save();toast('Setting saved')};
+ACT.theme=el=>{ const v=el.dataset.v; try{localStorage.setItem('stms-theme',v)}catch(e){} applyTheme(v); render(); };
+function applyTheme(v){ if(v==='auto')document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',v); }
+ACT.resetData=()=>openModal('Reset demo data',`<p style="margin:0">This replaces everything with the original sample plant: 128 trolleys, movements, alerts and approvals. Your changes will be lost.</p>`,`<button class="btn" data-act="closeModal">Cancel</button><button class="btn d" data-act="doReset">Reset</button>`);
+ACT.doReset=()=>{ initDB(true); UI.scan.res=null; UI.mv.last=null; closeModal(); toast('Demo data restored'); render(); };
+
+/* ---------- init ---------- */
+(function init(){
+ try{applyTheme(localStorage.getItem('stms-theme')||'auto')}catch(e){}
+ initDB(false);
+ const p=(location.hash||'').replace('#/',''); CUR=PAGES[p]&&allowed(p)?p:'dashboard';
+ render();
+ setInterval(()=>{ syncAlerts(); save(); refreshAll(); },30000);
+ window.addEventListener('resize',()=>chrome());
+})();
+</script>
+</body>
+</html>
