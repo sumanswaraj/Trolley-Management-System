@@ -1,13 +1,13 @@
 @echo off
+setlocal
 cd /d "%~dp0"
-if not exist .env (
- echo Copy .env.example to .env and set ADMIN_PASSWORD first.
+where node >nul 2>nul
+if errorlevel 1 (
+ echo Install Node.js 24 or later from https://nodejs.org, then run this file again.
  pause
  exit /b 1
 )
-if not exist node_modules\jsqr (
- call npm ci --omit=dev --ignore-scripts
- if errorlevel 1 exit /b 1
-)
-node --env-file=.env server.mjs
+node scripts\start-local.mjs %*
+set "trolley_exit=%errorlevel%"
 pause
+exit /b %trolley_exit%

@@ -18,8 +18,8 @@ export const canManagePlant = (user) => ['Admin', 'Supervisor'].includes(user.ro
 export function inputField(label, name, type = 'text', attributes = '') {
   return `<label>${label}<input name="${name}" type="${type}" required ${attributes}></label>`;
 }
-export function selectField(label, name, options) {
-  return `<label>${label}<select name="${name}" aria-label="${escapeHtml(label)}" required>${options}</select></label>`;
+export function selectField(label, name, options, required = true) {
+  return `<label>${label}<select name="${name}" aria-label="${escapeHtml(label)}" ${required ? 'required' : ''}>${options}</select></label>`;
 }
 export function optionsFor(records) {
   return records

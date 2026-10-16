@@ -1,4 +1,22 @@
-# Validation evidence for 0.4.0
+# Validation evidence for 0.5.0
+
+Validated in the cloud workspace with Node.js 24.19.0 and the installed Chromium browser:
+
+- Clean lockfile installation, JavaScript checks and formatting pass.
+- The local Bash/Node launcher was tested from a clean extracted copy in a folder containing spaces: first dependency install, private configuration, admin login, record creation, restart persistence, and the separate 128-trolley demo all pass. Windows batch execution remains untested on this Linux machine.
+- All 77 application/service/view/launcher tests pass, including database upgrades, persistence, roles, optimistic edits, immutable corrections, alerts, reader evidence, notifications, report filtering and safe demo resets.
+- All 12 browser workflows pass: the original five plus metadata/RFID lookup, incident handling, independent mismatch approvals, all eight report previews and 16 XLSX/PDF downloads, analytics/themes/mobile navigation, overdue reminders/returns and linked correction revisions.
+- XLSX downloads were reopened with ExcelJS and their actual columns and filtered row counts checked. PDF downloads contain real PDF documents.
+- All three existing hosted-adapter regression tests pass. The hosted site was not redeployed.
+- The isolated 400-request shared-state smoke with 20 concurrent clients and 50 trolleys completed with zero failures: 1,977 ms total, 202 requests/second and p95 150 ms in this run. This is a small local read test, not a production capacity estimate.
+- Automatic alert state uses a bounded number of reads as fleet/alert counts increase. Dashboard trolley metadata is batched rather than queried once per trolley.
+- Production dependency audit reports zero known vulnerabilities after pinning ExcelJS's UUID dependency to the compatible patched 11.1.1 release. This does not replace a security review.
+- The persistent application passed startup, health, login, state, report, analytics and audit checks. The separate sample application preserved its 128 trolleys, 11 locations, 10 products and six accounts across restart.
+- Desktop and mobile screens were visually inspected; mobile location-card spacing was corrected. Browser checks confirm no page-wide horizontal overflow in the movement/fleet and mobile location workflows.
+
+Physical cameras/RFID readers, vendor-specific drivers, Docker execution, public HTTPS deployment, extended soak and production capacity remain outside these local checks. Generated QR camera tests use a real encoded image delivered through an emulated video stream.
+
+## Previous release: 0.4.0
 
 Validated with Node.js 24.19.0 in the development workspace:
 

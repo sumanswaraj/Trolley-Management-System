@@ -97,7 +97,18 @@ export function readerService(repository, encryptionKey) {
       if (!repository.get('SELECT id FROM trolleys WHERE id = ?', trolley))
         fail(400, 'Unknown trolley');
       repository.transaction(() => {
-        const previous = repository.get('SELECT trolley FROM trolley_tags WHERE tag = ?', tag);
+        const collision = repository.get(
+          'SELECT id FROM trolleys WHERE id <> ? AND (lower(id) = lower(?) OR lower(qr_value) = lower(?) OR lower(rfid) = lower(?))',
+          trolley,
+          tag,
+          tag,
+          tag,
+        );
+        if (collision) fail(409, 'Tag matches another trolley identity');
+        const previous = repository.get(
+          'SELECT trolley FROM trolley_tags WHERE tag = ? COLLATE NOCASE',
+          tag,
+        );
         if (previous && previous.trolley !== trolley)
           fail(409, 'Tag is already assigned to another trolley');
         repository.run(
@@ -147,10 +158,18 @@ export function readerService(repository, encryptionKey) {
         }
         if (observedAt > now + 300000 || observedAt < now - 7 * 86400000)
           fail(400, 'Observation must be within the last seven days');
-        const mapping = repository.get('SELECT trolley FROM trolley_tags WHERE tag = ?', tag);
+        const mapping = repository.get(
+          'SELECT trolley FROM trolley_tags WHERE tag = ? COLLATE NOCASE',
+          tag,
+        );
         const trolley =
           mapping?.trolley ||
-          repository.get('SELECT id FROM trolleys WHERE id = ?', tag)?.id ||
+          repository.get(
+            'SELECT id FROM trolleys WHERE id = ? OR qr_value = ? OR rfid = ?',
+            tag,
+            tag,
+            tag,
+          )?.id ||
           null;
         const inserted = repository.run(
           `INSERT INTO reader_events

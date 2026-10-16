@@ -3,12 +3,14 @@ import { fail } from './errors.mjs';
 
 export const USER_ROLES = Object.freeze([
   'Admin',
+  'Plant Manager',
   'Supervisor',
   'Operator',
   'Quality User',
   'Store User',
 ]);
 export const MANAGER_ROLES = Object.freeze(['Admin', 'Supervisor']);
+export const APPROVER_ROLES = Object.freeze(['Admin', 'Supervisor', 'Plant Manager']);
 
 export function requireRole(user, allowedRoles) {
   if (!allowedRoles.includes(user.role)) fail(403, 'Your role cannot perform this action');

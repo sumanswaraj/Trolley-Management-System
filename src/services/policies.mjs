@@ -2,7 +2,6 @@ import { fail } from '../errors.mjs';
 import { integer, requiredText } from '../validation.mjs';
 import { requireRole, MANAGER_ROLES } from '../security.mjs';
 
-/** Policy is configured by the plant; defaults preserve existing installations. */
 export function policyService(repository) {
   const settings = () => repository.get('SELECT * FROM plant_settings WHERE id = 1');
   return {
@@ -25,18 +24,23 @@ export function policyService(repository) {
     },
     configure(user, input) {
       requireRole(user, ['Admin']);
-      for (const key of ['enforce_routes', 'enforce_categories', 'scope_operations']) {
+      const keys = [
+        'enforce_routes',
+        'enforce_categories',
+        'scope_operations',
+        'outside_approval',
+        'mismatch_approval',
+      ].filter((key) => input[key] !== undefined);
+      if (!keys.length) fail(400, 'Provide at least one policy setting');
+      for (const key of keys)
         if (typeof input[key] !== 'boolean') fail(400, `Provide a boolean for ${key}`);
-      }
       repository.transaction(() => {
         const previous = settings();
         repository.run(
-          'UPDATE plant_settings SET enforce_routes = ?, enforce_categories = ?, scope_operations = ? WHERE id = 1',
-          Number(input.enforce_routes),
-          Number(input.enforce_categories),
-          Number(input.scope_operations),
+          `UPDATE plant_settings SET ${keys.map((key) => `${key} = ?`).join(', ')} WHERE id = 1`,
+          ...keys.map((key) => Number(input[key])),
         );
-        repository.audit(user, 'Plant policy updated', 'plant', { previous, current: input });
+        repository.audit(user, 'Plant policy updated', 'plant', { previous, current: settings() });
       });
     },
     addRule(user, kind, input) {
@@ -121,6 +125,19 @@ export function policyService(repository) {
       );
       if (currentSettings.enforce_routes && !route)
         flags.push('Route is not approved for this product category');
+      if (
+        quantity > 0 &&
+        repository.get(
+          'SELECT location FROM product_locations WHERE product = ? LIMIT 1',
+          product.id,
+        ) &&
+        !repository.get(
+          'SELECT location FROM product_locations WHERE product = ? AND location = ?',
+          product.id,
+          destination,
+        )
+      )
+        flags.push('Product is not approved at this destination');
       if (
         quantity > 0 &&
         trolley.qty > 0 &&

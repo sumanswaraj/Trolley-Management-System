@@ -1,3 +1,22 @@
+import {
+  fleetTable,
+  fleetView,
+  dashboardView,
+  mastersView,
+  historyView,
+  movementTypes,
+} from './fleet-views.js';
+import {
+  overdueView,
+  locationsView,
+  productsView,
+  alertsView,
+  notificationsView,
+  scanView,
+  trolleyDetailView,
+} from './operations-views.js';
+import { reportCatalogueView, analyticsView, settingsView } from './report-views.js';
+export { fleetTable } from './fleet-views.js';
 import { policyView } from './policy-views.js';
 import { readerView } from './reader-views.js';
 import {
@@ -35,39 +54,6 @@ export function loginView() {
   </div></section>`;
 }
 
-export function fleetTable(state, trolleys = state.trolleys) {
-  const desktop = dataTable(
-    ['ID', 'Type', 'Location', 'State', 'Product / batch', 'Load', 'Label'],
-    trolleys.map(
-      (trolley) => `<tr>
-    <td><b>${escape(trolley.id)}</b></td>
-    <td>${escape(trolley.type)}</td>
-    <td>${escape(locationName(state, trolley.location))}</td>
-    <td><span class="badge">${escape(trolley.status)}</span></td>
-    <td>${escape(productName(state, trolley.product))}<div class="hint">${escape(trolley.batch)}</div></td>
-    <td>${trolley.qty} / ${trolley.capacity} ${escape(trolley.unit || 'pcs')}</td>
-    <td><a href="/api/trolleys/${encodeURIComponent(trolley.id)}/label" target="_blank" rel="noopener">QR label</a></td>
-  </tr>`,
-    ),
-  );
-  const mobile = trolleys.length
-    ? trolleys
-        .map(
-          (trolley) => `<article class="mobile-trolley">
-    <div class="card-heading"><h3>${escape(trolley.id)}</h3><span class="badge">${escape(trolley.status)}</span></div>
-    <dl><dt>Location</dt><dd>${escape(locationName(state, trolley.location))}</dd>
-      <dt>Type</dt><dd>${escape(trolley.type)}</dd>
-      <dt>Product</dt><dd>${escape(productName(state, trolley.product))}</dd>
-      <dt>Batch</dt><dd>${escape(trolley.batch || '—')}</dd>
-      <dt>Load</dt><dd>${trolley.qty} / ${trolley.capacity} ${escape(trolley.unit || 'pcs')}</dd></dl>
-    <a href="/api/trolleys/${encodeURIComponent(trolley.id)}/label" target="_blank" rel="noopener">QR label</a>
-  </article>`,
-        )
-        .join('')
-    : '<div class="empty">No records yet.</div>';
-  return `<div class="fleet-table">${desktop}</div><div class="trolley-cards">${mobile}</div>`;
-}
-
 function movementTable(state, movements, mode = 'history') {
   return dataTable(
     ['Trolley', 'Route', 'State', 'Requested', 'Actions'],
@@ -81,7 +67,7 @@ function movementTable(state, movements, mode = 'history') {
         movement.requested_by !== state.user.id
       ) {
         actions = `<button class="btn" data-action="approve" data-id="${movement.id}">Approve</button>
-        <button class="btn danger" data-action="reject" data-id="${movement.id}">Reject</button>`;
+        <button class="btn danger" data-action="reject" data-id="${movement.id}">Reject</button><button class="btn" data-action="correct" data-id="${movement.id}">Request correction</button>`;
       }
       return `<tr>
       <td><b>${escape(movement.trolley)}</b><div class="hint">${escape(productName(state, movement.product))} · ${movement.qty}</div></td>
@@ -94,46 +80,6 @@ function movementTable(state, movements, mode = 'history') {
   );
 }
 
-function dashboardView(state) {
-  const open = openMovements(state);
-  const metrics = [
-    ['Fleet', state.trolleys.length],
-    ['Available', state.trolleys.filter((trolley) => trolley.status === 'Available').length],
-    ['In transit', open.filter((movement) => movement.state === 'In Transit').length],
-    ['Overdue', open.filter((movement) => movement.expected < Date.now()).length],
-  ];
-  const attention = open.filter(
-    (movement) => movement.state === 'Pending' || movement.expected < Date.now(),
-  );
-  return `${pageTitle('Plant overview', `Shared operational data · ${state.trolleys.length} registered trolleys`)}
-    <div class="cards">${metrics.map(([name, value]) => `<div class="card metric"><span>${name}</span><strong>${value}</strong></div>`).join('')}</div>
-    ${!state.locations.length ? '<div class="callout">Start in Plant setup: register locations, products and trolleys. Then add operators in User management.</div>' : ''}
-    <div class="grid">
-      <section class="card"><h3>Location distribution</h3>
-        ${dataTable(
-          ['Location', 'Trolleys'],
-          state.locations.map(
-            (location) => `<tr>
-          <td>${escape(location.name)}</td><td>${state.trolleys.filter((trolley) => trolley.location === location.id).length}</td>
-        </tr>`,
-          ),
-        )}
-      </section>
-      <section class="card"><h3>Needs attention</h3>
-        ${dataTable(
-          ['Trolley', 'Status', 'Expected'],
-          attention.map(
-            (movement) => `<tr>
-          <td>${escape(movement.trolley)}</td>
-          <td><span class="badge ${movement.expected < Date.now() ? 'late' : ''}">${escape(movement.state)}${movement.expected < Date.now() ? ' · Overdue' : ''}</span></td>
-          <td>${formatTime(movement.expected)}</td>
-        </tr>`,
-          ),
-        )}
-      </section>
-    </div>`;
-}
-
 function movementView(state) {
   return `${pageTitle('Move or scan a trolley', 'Use a USB QR scanner or enter the trolley ID. Outside-plant movements require approval.')}
     <div class="grid">
@@ -143,18 +89,46 @@ function movementView(state) {
         <p id="scan-status" class="hint" role="status">Camera frames stay on this device. A scan fills the form; it does not submit a movement.</p>
         ${form(
           'move',
-          inputField(
-            'Scan / trolley ID',
-            'trolley',
-            'text',
-            'list="trolley-list" autocomplete="off"',
-          ) +
+          (state.movePrefill?.revision_of
+            ? `<input type="hidden" name="revision_of" value="${Number(state.movePrefill.revision_of)}"><p class="callout">Revising movement ${Number(state.movePrefill.revision_of)}. The original request remains in history.</p>`
+            : '') +
+            inputField(
+              'Scan / trolley ID',
+              'trolley',
+              'text',
+              'list="trolley-list" autocomplete="off"',
+            ) +
             `<datalist id="trolley-list">${state.trolleys.map((trolley) => `<option value="${escape(trolley.id)}"></option>`).join('')}</datalist>` +
-            selectField('Destination', 'destination', optionsFor(state.locations)) +
+            selectField(
+              'Movement type',
+              'movement_type',
+              movementTypes
+                .filter((type) =>
+                  state.user.role === 'Quality User'
+                    ? ['Quality Inspection', 'Quality Release', 'Transfer'].includes(type)
+                    : state.user.role === 'Store User'
+                      ? [
+                          'Production Issue',
+                          'Production Return',
+                          'Store Transfer',
+                          'Transfer',
+                        ].includes(type)
+                      : true,
+                )
+                .map((type) => `<option>${type}</option>`)
+                .join(''),
+            ) +
+            selectField(
+              'Destination',
+              'destination',
+              optionsFor(state.locations.filter((item) => item.active !== 0)),
+            ) +
             selectField(
               'Product',
               'product',
-              '<option value="">Empty trolley</option>' + optionsFor(state.products),
+              '<option value="">Empty trolley</option>' +
+                optionsFor(state.products.filter((item) => item.active !== 0)),
+              false,
             ) +
             inputField('Batch', 'batch', 'text', 'value="EMPTY"') +
             inputField(
@@ -164,6 +138,13 @@ function movementView(state) {
               'min="0" step="any" value="0"',
             ) +
             inputField('Expected arrival / return', 'expected', 'datetime-local') +
+            inputField(
+              'Movement date and time',
+              'occurred_at',
+              'datetime-local',
+              `value="${new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}"`,
+            ) +
+            `<label>Operator<input value="${escape(state.user.name)}" readonly></label><label>Department<input name="department"></label><label>Reason<input name="reason" maxlength="500"></label><label>Status after arrival<select name="status_after"><option value="auto">Set automatically</option>${['Available', 'In Use', 'Waiting', 'Maintenance', 'Outside Plant'].map((s) => `<option>${s}</option>`).join('')}</select></label><label>Remarks<textarea name="remarks" maxlength="1000" rows="2"></textarea></label><label class="check"><input type="checkbox" name="in_transit" checked>Keep in transit until physical receipt</label>` +
             '<label>Exception reason (only if policy mismatch)<input name="exceptionReason" maxlength="500" placeholder="Explain why an override is needed"></label>',
           'Record movement',
         )}
@@ -174,62 +155,9 @@ function movementView(state) {
           openMovements(state).filter((movement) => movement.state === 'In Transit'),
           'receive',
         )}
-        <p class="hint">Confirm only after the physical trolley reaches its destination.</p>
+        <div id="movement-preview" class="callout">Choose a trolley to check its assignment and route.</div><button class="btn" data-cancel-movement>Clear movement</button><p class="hint">Confirm only after the physical trolley reaches its destination.</p>
       </section>
     </div>`;
-}
-
-function mastersView(state) {
-  const title = pageTitle('Plant setup', 'Create real plant records. IDs must be unique.');
-  if (!canManagePlant(state.user))
-    return (
-      title + '<div class="callout">A supervisor or administrator can configure the plant.</div>'
-    );
-  return `${title}<div class="grid">
-    <section class="card"><h3>Location</h3>
-      ${form(
-        'locations',
-        inputField('Location ID', 'id') +
-          inputField('Name', 'name') +
-          '<label class="check"><input name="external" type="checkbox">Outside plant</label>',
-        'Add location',
-      )}
-    </section>
-    <section class="card"><h3>Product</h3>
-      ${form('products', inputField('Product code', 'id') + inputField('Product name', 'name') + inputField('Category', 'category', 'text', 'value="Unspecified"') + inputField('Quantity unit', 'unit', 'text', 'value="pcs" maxlength="20"'), 'Add product')}
-    </section>
-    <section class="card"><h3>Trolley</h3>
-      ${form(
-        'trolleys',
-        inputField('Trolley ID / QR value', 'id') +
-          inputField('Trolley type', 'type') +
-          inputField(
-            'Capacity (same units as load quantity)',
-            'capacity',
-            'number',
-            'min="1" step="any"',
-          ) +
-          inputField('Capacity unit', 'unit', 'text', 'value="pcs" maxlength="20"') +
-          selectField('Initial location', 'location', optionsFor(state.locations)),
-        'Register trolley',
-      )}
-    </section>
-    <section class="card"><h3>Registered masters</h3>
-      ${dataTable(
-        ['Location ID', 'Name'],
-        state.locations.map(
-          (location) =>
-            `<tr><td>${escape(location.id)}</td><td>${escape(location.name)}${location.external ? ' · Outside plant' : ''}</td></tr>`,
-        ),
-      )}
-      ${dataTable(
-        ['Product', 'Name'],
-        state.products.map(
-          (product) => `<tr><td>${escape(product.id)}</td><td>${escape(product.name)}</td></tr>`,
-        ),
-      )}
-    </section>
-  </div>`;
 }
 
 function usersView(state) {
@@ -248,7 +176,7 @@ function usersView(state) {
           selectField(
             'Role',
             'role',
-            ['Admin', 'Supervisor', 'Operator', 'Quality User', 'Store User']
+            ['Admin', 'Plant Manager', 'Supervisor', 'Operator', 'Quality User', 'Store User']
               .map((role) => `<option>${role}</option>`)
               .join(''),
           ),
@@ -273,9 +201,7 @@ function pageContent(state, page) {
     case 'dashboard':
       return dashboardView(state);
     case 'fleet':
-      return `${pageTitle('Trolley fleet', 'Location updates after receipt is confirmed.')}
-      <input id="search" class="search" placeholder="Search trolley, type or location" aria-label="Search fleet">
-      <section class="card" id="fleet">${fleetTable(state)}</section>`;
+      return fleetView(state);
     case 'movement':
       return movementView(state);
     case 'approvals':
@@ -284,12 +210,9 @@ function pageContent(state, page) {
         state,
         openMovements(state).filter((movement) => movement.state === 'Pending'),
         'approve',
-      )}</section>`;
+      )}</section>${verificationApprovals(state)}`;
     case 'history':
-      return `${pageTitle('Movement history', 'Paged history from the full database. Recorded events only.')}
-      <button class="btn" data-export="movements">Export CSV</button>
-      <section class="card">${movementTable(state, state.historyPage?.items || state.movements)}</section>
-      ${state.historyPage?.nextCursor ? '<button class="btn mt" data-more="history">Load older movements</button>' : ''}`;
+      return historyView(state);
     case 'audit':
       return `${pageTitle('Audit trail', 'Paged audit history. Supervisors and administrators only.')}
       <section class="card">${dataTable(
@@ -306,7 +229,25 @@ function pageContent(state, page) {
     case 'readers':
       return readerView(state, state.readerSecret);
     case 'reports':
-      return reportsView(state);
+      return reportCatalogueView(state);
+    case 'scan':
+      return scanView(state);
+    case 'overdue':
+      return overdueView(state);
+    case 'locations':
+      return locationsView(state);
+    case 'products':
+      return productsView(state);
+    case 'alerts':
+      return alertsView(state);
+    case 'notifications':
+      return notificationsView(state);
+    case 'analytics':
+      return analyticsView(state);
+    case 'settings':
+      return settingsView(state);
+    case 'detail':
+      return trolleyDetailView(state, state.selectedTrolley);
     case 'masters':
       return mastersView(state);
     case 'users':
@@ -319,27 +260,42 @@ function pageContent(state, page) {
 }
 
 export function workspaceView(state, page) {
+  const manager = ['Admin', 'Plant Manager', 'Supervisor'].includes(state.user.role);
+  const canMove = state.user.role !== 'Plant Manager';
   const navigation = [
     ['dashboard', 'Overview'],
-    ['fleet', 'Trolley fleet'],
-    ['movement', 'Move / scan'],
-    ['approvals', 'Approvals'],
-    ['history', 'Movement history'],
-    ['reports', 'Reports'],
     ['masters', 'Plant setup'],
+    ['fleet', 'Trolley fleet'],
+    ['overdue', 'Overdue trolleys'],
+    ['locations', 'Locations'],
+    ['history', 'Movement history'],
+    ['products', 'Products & materials'],
+    ['alerts', 'Alerts'],
   ];
+  if (canMove) navigation.splice(2, 0, ['scan', 'Scan trolley'], ['movement', 'Move / scan']);
+  if (manager || state.user.role === 'Quality User') navigation.push(['approvals', 'Approvals']);
+  if (manager) navigation.push(['reports', 'Reports'], ['analytics', 'Analytics']);
+  if (canManagePlant(state.user)) navigation.push(['policies', 'Plant rules']);
   if (canManagePlant(state.user))
-    navigation.push(['policies', 'Plant rules'], ['audit', 'Audit trail']);
+    navigation.push(['settings', 'Settings'], ['audit', 'Audit trail']);
   if (state.user.role === 'Admin')
     navigation.push(['readers', 'Readers & tags'], ['users', 'User management']);
+  const unread = (state.notifications || []).filter((item) => !item.read && !item.read_at).length;
+  const badges = {
+    alerts: (state.alerts || []).filter((a) => a.status !== 'Resolved').length,
+    approvals:
+      openMovements(state).filter((m) => m.state === 'Pending').length +
+      (state.approvals || []).filter((a) => a.status === 'Pending').length,
+  };
   return `<div class="shell">
-    <aside><h2>Smart Trolley</h2><p>PLANT OPERATIONS</p><nav>
-      ${navigation.map(([id, title]) => `<button data-page="${id}" class="${page === id ? 'on' : ''}" ${page === id ? 'aria-current="page"' : ''}>${title}</button>`).join('')}
-    </nav></aside>
-    <main><header>
-      <div><b>${escape(state.user.name)}</b><small>${escape(state.user.role)} · Shared workspace</small></div>
-      <div class="actions"><button class="btn" id="refresh">Refresh</button><button class="btn" id="logout">Sign out</button></div>
-    </header><div class="content">${pageContent(state, page)}</div></main>
+    <aside id="sidebar"><div class="brand"><span class="brand-mark">T</span><div><h2>Smart Trolley</h2><p>PLANT OPERATIONS</p></div></div><nav aria-label="Plant navigation">
+      ${navigation.map(([id, title]) => `<button data-page="${id}" class="${page === id ? 'on' : ''}" ${page === id ? 'aria-current="page"' : ''}><span>${title}</span>${badges[id] ? `<span class="nav-count">${badges[id]}</span>` : ''}</button>`).join('')}
+    </nav><div class="sidebar-footer"><span class="online-dot"></span>Shared plant workspace</div></aside>
+    <button class="sidebar-scrim" aria-label="Close navigation" data-menu-close hidden></button>
+    <main><header><button class="btn menu-toggle" data-menu-toggle aria-label="Open navigation">☰</button><form id="global-lookup" class="global-search"><label class="sr-only" for="global-code">Find a trolley</label><input id="global-code" name="code" placeholder="Find trolley by ID, QR or RFID" required><button type="submit" class="btn" aria-label="Find trolley">Find</button><div class="error" role="alert"></div></form><time id="plant-clock" class="clock"></time>
+      <div class="user-identity"><b>${escape(state.user.name)}</b><small>${escape(state.user.role)}</small></div>
+      <div class="actions"><button class="btn notification-button" data-page="notifications" aria-label="Notifications${unread ? `, ${unread} unread` : ''}">Notifications ${unread ? `<span class="nav-count">${unread}</span>` : ''}</button><button class="btn" id="refresh">Refresh</button><button class="btn" id="logout">Sign out</button></div>
+    </header><div class="content">${pageContent(state, page)}</div><nav class="bottom-nav" aria-label="Quick navigation"><button data-page="dashboard">Home</button>${canMove ? '<button data-page="scan">Scan</button><button data-page="movement">Move</button>' : ''}<button data-page="alerts">Alerts</button><button data-menu-toggle>More</button></nav></main>
   </div>`;
 }
 
@@ -351,39 +307,12 @@ function canApprove(state, movement) {
   const flags = JSON.parse(movement.policy_flags || '[]');
   return movement.requires_quality
     ? user.role === 'Admin' || (!flags.length && !external && user.role === 'Quality User')
-    : canManagePlant(user);
+    : ['Admin', 'Plant Manager', 'Supervisor'].includes(user.role);
 }
 
-function reportsView(state) {
-  const report = state.report;
-  return `${pageTitle('Operational reports', 'Calculated from recorded movements; the daily buckets use UTC.')}
-    <section class="card">
-      ${form('report-filter', inputField('From (local time)', 'from', 'datetime-local') + inputField('To (local time)', 'to', 'datetime-local'), 'Calculate report')}
-      ${
-        report
-          ? `<div class="cards">
-        ${[
-          ['Requested', report.totals.requested],
-          ['Received', report.totals.received || 0],
-          ['Rejected', report.totals.rejected || 0],
-          [
-            'Mean request-to-receipt (hours)',
-            report.totals.mean_receipt_ms === null
-              ? '—'
-              : (report.totals.mean_receipt_ms / 3600000).toFixed(2),
-          ],
-        ]
-          .map(
-            ([title, value]) =>
-              `<div class="card metric"><span>${title}</span><strong>${value}</strong></div>`,
-          )
-          .join('')}
-      </div><p class="hint">${formatTime(report.from)} to ${formatTime(report.to)}. The mean includes time waiting for approval.</p>
-      ${dataTable(
-        ['Day (UTC)', 'Requested movements'],
-        report.daily.map((day) => `<tr><td>${escape(day.day)}</td><td>${day.count}</td></tr>`),
-      )}`
-          : ''
-      }
-    </section>`;
+function verificationApprovals(state) {
+  const pending = (state.approvals || []).filter((a) => a.status === 'Pending');
+  const history = (state.approvals || []).filter((a) => a.status !== 'Pending');
+  const canDecide = ['Admin', 'Plant Manager', 'Supervisor'].includes(state.user.role);
+  return `<section class="card mt"><h3>Product verification approvals</h3>${pending.map((a) => `<article class="approval-card"><h4>${escape(a.trolley)} · Product mismatch</h4><p>${escape(a.reason)}</p><p class="hint">Requested by ${escape(a.requester)} · ${formatTime(a.created)}</p><ul>${(a.flags || []).map((flag) => `<li>${escape(flag.message)}</li>`).join('')}</ul>${canDecide && a.requested_by !== state.user.id ? `<div class="actions">${['Approved', 'Rejected', 'Correction Required'].map((decision) => `<button class="btn" data-verification-decision="${decision}" data-id="${a.id}">${decision === 'Approved' ? 'Approve' : decision === 'Rejected' ? 'Reject' : 'Request correction'}</button>`).join('')}</div>` : '<p class="hint">Awaiting an independent approver.</p>'}</article>`).join('') || '<div class="empty">No pending product verifications.</div>'}</section><section class="card mt"><h3>Approval history</h3>${dataTable(['Trolley', 'Request', 'Decision', 'Decided by', 'Date', 'Remarks'], [...history.map((a) => `<tr><td>${escape(a.trolley)}</td><td>Product verification</td><td>${escape(a.status)}</td><td>${escape(a.decider)}</td><td>${a.decided_at ? formatTime(a.decided_at) : '—'}</td><td>${escape(a.remarks)}</td></tr>`), ...state.movements.filter((m) => m.approved_by || m.state === 'Rejected').map((m) => `<tr><td>${escape(m.trolley)}</td><td>${escape(m.movement_type || 'Movement')}</td><td>${escape(m.display_status || m.state)}</td><td>${escape(m.approver_name || '')}</td><td>${formatTime(m.decided_at || m.created)}</td><td>${escape(m.decision_reason)}</td></tr>`)])}</section>`;
 }

@@ -13,6 +13,8 @@ import { labelService } from '../services/labels.mjs';
 import { policyService } from '../services/policies.mjs';
 import { reportService } from '../services/reports.mjs';
 import { readerService } from '../services/readers.mjs';
+import { operationService } from '../services/operations.mjs';
+import { exportReport } from '../services/exports.mjs';
 import { readJson } from './body.mjs';
 
 const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -25,6 +27,9 @@ const STATIC_FILES = {
   '/scanner.js': ['scanner.js', 'text/javascript'],
   '/policy-views.js': ['policy-views.js', 'text/javascript'],
   '/reader-views.js': ['reader-views.js', 'text/javascript'],
+  '/fleet-views.js': ['fleet-views.js', 'text/javascript'],
+  '/operations-views.js': ['operations-views.js', 'text/javascript'],
+  '/report-views.js': ['report-views.js', 'text/javascript'],
   '/style.css': ['style.css', 'text/css'],
 };
 
@@ -47,6 +52,7 @@ export function createApp({
   const policies = policyService(repository);
   const movements = movementService(repository, policies);
   const reports = reportService(repository);
+  const operations = operationService(repository, policies);
   const labels = labelService(repository);
   let readers;
   try {
@@ -146,7 +152,53 @@ export function createApp({
         return send(200, { ok: true }, { 'Set-Cookie': sessionCookie('', secureCookie, 0) });
       }
       if (pathname === '/api/state' && request.method === 'GET')
-        return send(200, masters.state(user));
+        return send(200, {
+          ...masters.state(user),
+          ...operations.state(user),
+          operationSettings: policies.settings(),
+          tags: repository.all('SELECT tag, trolley FROM trolley_tags ORDER BY tag'),
+          flow: repository.all(
+            "SELECT source, destination, COUNT(*) AS count FROM movements WHERE state IN ('In Transit','Received') AND created >= ? GROUP BY source, destination",
+            Date.now() - 86400000,
+          ),
+        });
+      if (pathname === '/api/operations' && request.method === 'GET')
+        return send(200, operations.state(user));
+      if (pathname === '/api/incidents' && request.method === 'POST')
+        return send(201, operations.report(user, input));
+      if (pathname === '/api/verifications' && request.method === 'POST')
+        return send(201, operations.verify(user, input));
+      if (pathname === '/api/verification-approvals' && request.method === 'POST')
+        return send(201, operations.requestApproval(user, input));
+      const operationRoute = pathname.match(
+        /^\/api\/(alerts|verification-approvals|notifications)\/(\d+|all)$/,
+      );
+      if (operationRoute && request.method === 'POST') {
+        const [, kind, id] = operationRoute;
+        if (kind === 'notifications')
+          return send(200, operations.readNotification(user, id === 'all' ? id : Number(id)));
+        if (id === 'all') fail(400, 'Choose a record');
+        return send(
+          200,
+          kind === 'alerts'
+            ? operations.updateAlert(user, Number(id), input)
+            : operations.decide(user, Number(id), input),
+        );
+      }
+      if (pathname === '/api/reminders' && request.method === 'POST')
+        return send(201, operations.remind(user, input.trolley, input));
+      if (pathname === '/api/lookup' && request.method === 'GET') {
+        const code = (url.searchParams.get('code') || '').trim();
+        const trolley = repository.get(
+          `SELECT t.* FROM trolleys t WHERE lower(t.id)=lower(?) OR lower(t.qr_value)=lower(?) OR lower(t.rfid)=lower(?) OR t.id IN (SELECT trolley FROM trolley_tags WHERE lower(tag)=lower(?)) LIMIT 1`,
+          code,
+          code,
+          code,
+          code,
+        );
+        if (!code || !trolley) fail(404, 'No trolley matches this ID, QR or RFID');
+        return send(200, masters.detail(user, 'trolleys', trolley.id));
+      }
       if (pathname === '/api/policies' && request.method === 'GET')
         return send(200, policies.describe(user));
       if (pathname === '/api/policies/settings' && request.method === 'POST') {
@@ -164,6 +216,23 @@ export function createApp({
         return send(200, reports.history(user, 'audit', url.searchParams));
       if (pathname === '/api/reports/summary' && request.method === 'GET')
         return send(200, reports.summary(user, url.searchParams));
+      if (pathname === '/api/reports' && request.method === 'GET')
+        return send(200, reports.catalogue(user, url.searchParams));
+      if (pathname === '/api/analytics' && request.method === 'GET')
+        return send(200, reports.analytics(user, url.searchParams));
+      const exportRoute = pathname.match(/^\/api\/reports\/([a-z]+)\/(xlsx|pdf)$/);
+      if (exportRoute && request.method === 'GET') {
+        const exported = await exportReport(
+          reports.catalogue(user, exportRoute[1], url.searchParams),
+          exportRoute[2],
+        );
+        response.writeHead(200, {
+          'Content-Type': exported.type,
+          'Content-Disposition': `attachment; filename="${exported.filename}"`,
+          'Cache-Control': 'no-store',
+        });
+        return response.end(exported.buffer);
+      }
       if (pathname === '/api/readers' && request.method === 'GET')
         return send(200, readers.list(user));
       if (pathname === '/api/readers' && request.method === 'POST')
@@ -193,10 +262,30 @@ export function createApp({
         masters.create(user, masterRoute[1], input);
         return send(201, { ok: true });
       }
+      const editRoute = pathname.match(
+        /^\/api\/(locations|products|trolleys)\/([^/]+)\/(update|active)$/,
+      );
+      if (editRoute && request.method === 'POST') {
+        const [, kind, encoded, action] = editRoute;
+        let id;
+        try {
+          id = decodeURIComponent(encoded);
+        } catch {
+          fail(400, 'Invalid record ID');
+        }
+        return send(
+          200,
+          action === 'update'
+            ? masters.update(user, kind, id, input)
+            : masters.setActive(user, kind, id, input),
+        );
+      }
       if (pathname === '/api/movements' && request.method === 'POST') {
         return send(201, movements.request(user, input));
       }
-      const actionRoute = pathname.match(/^\/api\/movements\/(\d+)\/(approve|reject|receive)$/);
+      const actionRoute = pathname.match(
+        /^\/api\/movements\/(\d+)\/(approve|reject|receive|correct)$/,
+      );
       if (actionRoute && request.method === 'POST') {
         return send(200, movements.transition(user, Number(actionRoute[1]), actionRoute[2], input));
       }

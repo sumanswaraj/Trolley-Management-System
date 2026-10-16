@@ -19,7 +19,10 @@ async function signIn(page, username = 'admin') {
   await expect(page.getByRole('heading', { name: 'Plant overview' })).toBeVisible();
 }
 async function navigate(page, name, heading) {
-  await page.getByRole('button', { name, exact: true }).click();
+  const navigation = page.locator('#sidebar');
+  if (await page.getByRole('button', { name: 'Open navigation', exact: true }).isVisible())
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+  await navigation.getByRole('button', { name, exact: true }).click();
   await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 }
 
@@ -48,7 +51,7 @@ for (const viewport of [
     await navigate(page, 'Trolley fleet', 'Trolley fleet');
     if (viewport.width < 850)
       await expect(page.locator('.trolley-cards').getByText('Line', { exact: true })).toBeVisible();
-    else await expect(page.getByRole('cell', { name: 'Line', exact: true })).toBeVisible();
+    else await expect(page.getByRole('cell', { name: 'Store → Line', exact: true })).toBeVisible();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
     );

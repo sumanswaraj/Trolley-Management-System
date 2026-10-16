@@ -126,7 +126,7 @@ test('restart keeps records, existing password and migration versions', async ()
     f = await fixture(path);
     const state = (await f.request('state', undefined, f.admin)).body;
     assert.equal(state.trolleys.length, 1);
-    assert.equal(f.repository.all('SELECT * FROM schema_migrations').length, 4);
+    assert.equal(f.repository.all('SELECT * FROM schema_migrations').length, 6);
   } finally {
     await f.close();
     rmSync(directory, { recursive: true, force: true });

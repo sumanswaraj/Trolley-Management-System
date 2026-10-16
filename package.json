@@ -1,29 +1,39 @@
 {
   "name": "smart-trolley-management",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Shared trolley operations with authenticated API and persistent SQLite storage",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
-    "start": "node server.mjs",
-    "dev": "node --watch server.mjs",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "dev": "node --env-file-if-exists=.env --watch server.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs",
     "test:browser": "playwright test",
     "test:load": "node scripts/load-smoke.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:hosted": "node --test deploy/hosted-demo/tests/hosted-api.test.mjs"
+    "test:hosted": "node --test deploy/hosted-demo/tests/hosted-api.test.mjs",
+    "demo": "node --env-file-if-exists=.env scripts/demo.mjs",
+    "local": "node scripts/start-local.mjs",
+    "local:demo": "node scripts/start-local.mjs --demo"
   },
   "type": "module",
   "dependencies": {
+    "exceljs": "4.4.0",
     "jsqr": "1.4.0",
+    "pdfkit": "0.17.2",
     "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
     "prettier": "3.8.3"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

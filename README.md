@@ -1,17 +1,25 @@
 # Smart Trolley Management System
 
-Version 0.4.0 is a runnable full-stack plant pilot with a responsive UI, authenticated Node.js API, persistent SQLite storage, configurable plant policies and a signed reader-observation interface. Code is separated into views, controllers, services, validation, security, database access and versioned migrations.
+Version 0.5.0 expands the supplied HTML prototype into a full-stack plant workspace with a responsive UI, authenticated Node.js API, persistent SQLite storage, configurable plant policies and a signed reader-observation interface. Code is separated into views, controllers, services, validation, security, database access and versioned migrations.
 
-## Connected private demo
+## Prototype upgrade
+
+The operational app now covers the prototype workflows with server-owned SQLite records: dashboard and flow counts, trolley master editing and activation, QR/RFID lookup, camera scanning, live cards/table filters, overdue follow-up, location occupancy, product verification, independent mismatch approvals, alerts, per-user notifications, filtered histories, eight Excel/PDF reports, seven analytics charts, approval settings and themes. The full feature map is in [docs/FEATURES.md](docs/FEATURES.md).
+
+Use `npm run demo` for an isolated 128-trolley sample plant on port 8081 after configuring `.env`. Demo accounts and reset instructions are in [docs/DEMO_DATA.md](docs/DEMO_DATA.md). Normal operation uses `data/trolley.sqlite`; the demo uses a separate database.
+
+## Connected private demo (previous release)
 
 Open https://smart-trolley-demo.swarajminiscience199.chatgpt.site and sign in with the same ChatGPT account. The demo uses a persistent hosted D1 database and 24 sample trolleys. Switch sample roles in the demo toolbar to try independent approvals. It uses managed Site identity; sample actors are not real production logins. Real reader provisioning and user administration remain in the full Node installation. The hosting adapter source is included under deploy/hosted-demo.
 
 ## Run on Windows, Linux or macOS
 
+For automatic local setup, follow [LOCAL-RUN.md](LOCAL-RUN.md): double-click `start-windows.cmd` on Windows or run `bash start-local.sh` on macOS/Linux. The launcher creates private settings on first use and installs the required dependencies.
+
 1. Install Node.js 24 or later.
-2. Copy .env.example to .env. Set a unique ADMIN_PASSWORD with at least 12 characters.
-3. Run `npm ci --omit=dev --ignore-scripts` to install the pinned QR packages.
-4. Run `node --env-file=.env server.mjs`. On Windows, you can double-click start-windows.cmd; it installs production dependencies if missing.
+2. Copy .env.example to .env. Set a unique ADMIN_PASSWORD with at least 12 characters. Set DEVICE_ENCRYPTION_KEY to 32 random bytes encoded as 64 hex characters when reader provisioning is needed.
+3. Run `npm ci --omit=dev --ignore-scripts` to install the pinned production dependencies.
+4. Run `npm start` (or `npm run dev` for automatic restarts). On Windows, you can double-click start-windows.cmd; it installs production dependencies if missing.
 5. Open http://127.0.0.1:8080 and sign in as admin with your configured password.
 6. Add locations, products (category/unit) and trolleys (capacity/unit), then create named users.
 7. Configure compatibility, routes and location rights in Plant rules before enabling enforcement.
@@ -46,6 +54,8 @@ Run `npm ci --ignore-scripts` for development tooling, then:
     npx playwright install chromium
     npm run test:browser
     npm run test:load
+
+The cloud environment can run browser tests with `CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:browser`, without downloading another browser. If npm’s default cache is not writable, append `--cache /workspace/.npm-cache` to installation commands.
 
 Browser tests support CHROMIUM_EXECUTABLE_PATH when using an existing compatible browser. See docs/VALIDATION.md for measured results and their limits.
 
