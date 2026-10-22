@@ -37,10 +37,10 @@ Status: Node 0.5.0 software implementation and local acceptance are complete. Gi
 - [x] Check persistence and restart without losing existing records or credentials.
 - [x] Review final diff/status for unintended changes and sensitive/generated files.
 - [x] Record actual results and outstanding limits in project memory and delivery notes.
-- [ ] Push the committed release after GitHub write access is restored.
+- [x] Push the committed release after GitHub write access is restored.
 
 ## Evidence log
 
 Validation on 2026-10-22: 46 application tests, 3 hosted-adapter tests and 13 browser tests passed; the isolated 400-request smoke had zero failures. Syntax, Prettier and whitespace checks passed. Offline browser routing, desktop/phone screenshots and keyboard modal focus were checked. See docs/VALIDATION.md for scope and platform limits.
 
-Delivery: source commit c84bd3b is on local branch `codex/trolley-v0.5.0`. The authorized push was attempted and GitHub returned HTTP 403: connected account `swarajsuman321-dev` has no write access to `sumanswaraj/Trolley-Management-System`. Reconnect an authorized GitHub account or grant the intended connected account write access, then retry the existing branch push. No remote release or updated public download is claimed.
+Delivery: GitHub write access was restored and the authorized push succeeded on 2026-10-22. Version 0.5.0 is available on remote branch `codex/trolley-v0.5.0` in `sumanswaraj/Trolley-Management-System`. The source implementation commit is c84bd3b. The default `main` branch and separate hosted deployment were not changed by this branch push.
