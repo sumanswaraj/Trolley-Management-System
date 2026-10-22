@@ -30,6 +30,8 @@ Master creation/editing requires Admin, matching the reference permission matrix
 
 Windows execution, actual cameras/RFID hardware, Docker, public HTTPS and the separate hosted demo deployment were not validated or updated by these local checks. No prepared cloud-workspace ZIP should be presented as a public download. GitHub delivery must be reported only after push succeeds.
 
+The source is committed locally as c84bd3b on `codex/trolley-v0.5.0`. The authorized `git push -u origin codex/trolley-v0.5.0` received HTTP 403 because connected account `swarajsuman321-dev` lacks repository write access. Preserve the local branch. After the user corrects GitHub access, retry that push and verify the remote ref; do not change Git author identity or request a token in chat as an authentication workaround.
+
 ## Recording rules
 
 Never record credential values, tokens, customer data or a complete environment dump here. Separate observations from assumptions. When a decision changes, update the requirement/design/task that governs it and summarize the reason here; avoid leaving contradictory instructions across documents.
