@@ -1,28 +1,38 @@
-# Delivery status and enterprise release plan
+# Delivery status and release plan
 
-## Implemented in 0.3
+## Node 0.5.0 implementation
 
-Shared frontend/API, users and sessions, master data, departure/approval/receipt, transactional audit/history, version checks, idempotency, deployment packages and backup tools.
+The current code connects the supplied reference design to the persistent Node application. Integrated local software acceptance is recorded in [tasks.md](tasks.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
 
-## Implemented in 0.4
+Implemented areas include:
 
-- Configurable category/type compatibility, allowed routes, quality releases and capacity units.
-- Independent policy exception approvals with immutable flags and recorded reasons.
-- Source/destination mutation permissions by user and location.
-- Complete paged histories and CSV export; real-event reporting; restricted audit visibility.
-- Camera QR scan with native/local decoder, physical receipt confirmation and QR label generation.
-- Signed reader event API, encrypted per-reader keys, mapping, rotation/revocation and observation deduplication.
-- Desktop/phone browser tests, real QR decoding with a simulated stream, migration preservation and isolated load smoke.
-- Formatting tooling and updated deployment/device/policy documentation.
+- All fourteen reference pages and six real account roles with server-defined access metadata.
+- Shared offline shell, responsive drawer/bottom navigation, global identity search, theme, clock and notifications.
+- Expanded trolley, location and product records, permanent QR/RFID identity, detail views, lifecycle controls and migration 005.
+- Declared movement context, receipt/direct-completed handovers, independent approval, rejection, correction and linked resubmission.
+- Product verification, alert lifecycle, derived exceptions, per-account notification reads, in-app reminders and movement-based overdue return.
+- Real-event reports/analytics and actual CSV, XLSX and PDF exports with filters and unpaginated downloads.
+- Admin-only 128-trolley sample plant load and guarded snapshot reset that retains accounts/history.
+- Preserved account administration, plant rules, reader provisioning/signatures, history/audit and backup tools.
 
-## Next: physical plant pilot
+The older 0.3/0.4 application supplied the persistent account, movement, policy and reader foundations. Their former test counts are historical and do not prove this revision's acceptance.
 
-Confirm hosting, plant layout, categories, units, routes, reader model/protocol, tag format and antenna direction. Configure identities, rules and location rights. Fit labels and bridge the reader protocol to the signed observation contract. Run actual camera/reader tests, clock/offline/retry scenarios and supervised departures/receipts with two or more users. Keep observations separate from confirmed movements until the physical evidence is validated.
+## Release verification
 
-## Enterprise infrastructure release
+The 2026-10-22 integrated checks passed: 46 application tests, 3 separate hosted-adapter tests, 13 browser journeys and a 400-request isolated smoke with zero failures. Local offline assets, desktop/phone layouts, modal focus and preserved input were checked. Migration/restart/backup and immutable history are covered by tests. See docs/VALIDATION.md for exact scope and remaining platform limits.
 
-Implement PostgreSQL and migration tests, managed SSO/MFA/password recovery, scalable sessions/rate limits, durable device buffering, paginated large-fleet APIs, monitoring and disaster recovery automation. Define availability, retention and load targets, then conduct multi-hour load/soak, external security review and recovery exercises. Complete multi-stage approvals and data visibility scopes if required by the plant. Deploy only into confirmed hosting with HTTPS and operational ownership.
+The user has requested a version update and GitHub delivery. Prepare the verified source on the task branch and report the actual commit/push/download result after it succeeds. Do not equate a local change with a published branch or a hosted redeployment.
 
-## Acceptance evidence
+## Physical plant pilot
 
-See docs/VALIDATION.md. Local tests verify shared persisted state, server-side permissions, independent approvals, consistent versions, deduplication, receipt, account revocation, reader signatures and preserved histories. Physical device behavior, multi-instance scaling, infrastructure security and availability remain release gates.
+Confirm the plant layout, units/categories, routes, readers/protocols, tags and responsible users. Configure real accounts, rules and location scopes. Fit QR labels and bridge device observations to the signed contract. Validate actual cameras/readers, clock/retry behavior and supervised handovers with independent approvers. Keep observations separate from operational receipt.
+
+For Windows updates, stop the old process, back up the original installation, preserve `.env`, its reader key and complete `data/`, install the new matching dependencies and apply migrations at startup. Do not ship or overwrite a user's database with a sample snapshot.
+
+## Separate hosted adapter
+
+`deploy/hosted-demo` remains a separate older deployment with D1 storage and managed identity/sample actors. Node 0.5 features are not automatically ported or redeployed there. A hosted parity/deployment task needs its own implementation and validation evidence.
+
+## Infrastructure roadmap
+
+PostgreSQL/shared sessions, paginated large-fleet APIs, managed SSO/MFA/password recovery, durable disconnected-device buffering, multi-stage approval chains and visibility scopes remain separate work. Define retention, load, availability, security and recovery targets before multi-site rollout. Public HTTPS, Docker execution, external security review, actual hardware and multi-hour soak require dedicated validation.

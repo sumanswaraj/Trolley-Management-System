@@ -1,19 +1,47 @@
-# Validation evidence for 0.4.0
+# Validation evidence — Node 0.5.0
 
-Validated with Node.js 24.19.0 in the development workspace:
+Validated on 2026-10-22 with Node.js 24.19.0 and Chromium 154 on Linux.
 
-- JavaScript syntax checks pass.
-- 21 backend/frontend-rendering tests pass, covering authentication, authorization, simultaneous receipt, capacity units, route/category policies, independent exception approval, quality release, location restrictions, idempotency, histories and real-event reports.
-- Migration tests preserve version 0.3 account/master/load records while applying new migrations.
-- A consistent SQLite online backup was restored and verified.
-- Reader tests verify HMAC authentication, encrypted secrets, duplicate-event handling, stale timestamps, unknown tags, credential rotation and revocation. Observations leave operational location unchanged.
-- Five browser workflows pass with Chromium 153: desktop (1440px) and phone (390px) movement/receipt, generated QR decoding through a simulated camera stream, permission-denial fallback, and administrator policy/reader provisioning.
-- Screenshots of desktop and phone fleet views were visually inspected. Phone fleet cards expose all trolley details without page-wide horizontal overflow.
-- A local read-only load smoke completed 400 shared-state requests with 20 concurrent clients and 50 trolleys: zero failures, 478 ms elapsed, p50 19 ms and p95 38 ms in this run. This is a small isolated smoke test, not a production capacity or SLA claim.
-- npm audit --omit=dev reported zero known production dependency vulnerabilities at the time of the check. This does not replace a security review.
+## Automated results
 
-Physical cameras/readers, actual reader protocols, Docker image execution, public HTTPS hosting, multi-hour soak, browser/device coverage beyond the tested Chromium setup, external penetration testing and HA/disaster-recovery infrastructure have not been validated. Deployment and enterprise certification are not implied by passing local tests.
+| Command                                                           | Result                                                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `npm run check`                                                   | JavaScript syntax checks passed.                                                     |
+| `npm run format:check`                                            | All matched files passed Prettier.                                                   |
+| `npm test`                                                        | 46 application/domain/API/rendering tests passed; none failed or skipped.            |
+| `npm run test:hosted`                                             | 3 separate hosted-adapter tests passed; this is not hosted 0.5 parity or deployment. |
+| `CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:browser` | 13 browser journeys passed.                                                          |
+| `npm run test:load`                                               | 400 requests, 20 concurrent clients, 50 trolleys, zero failures.                     |
+| `git diff --check`                                                | No whitespace errors.                                                                |
 
-## Connected private demo
+The load run completed in 10,249 ms with p50 395 ms and p95 813 ms while other validation work was running. This is an isolated local smoke test, not a production throughput guarantee or enterprise service level.
 
-The hosted build and three D1-adapter transaction tests pass. The private demo was deployed with its database binding connected. Two live empty-trolley movements for TR-024 were recorded and received, read back through fresh API requests, and independently confirmed in the hosted movements table. The trolley was restored to QUALITY; these verification events remain in history. The demo uses managed ChatGPT identity and sample role actors; physical reader provisioning and real account administration are available in the full Node installation. Hosted visual QA was not performed because the required managed browser integration was unavailable; the shared local frontend had the five browser workflows described above.
+Application coverage includes account/session permissions, six roles, rich master records and identity uniqueness, migration and restart preservation, online backup/restore, optimistic versions, idempotency, load/capacity/unit checks, independent quality/exception approval, correction/resubmission, physical receipt/direct entry semantics, overdue deadlines after receipt, per-user notifications, alert lifecycle, signed reader evidence, eight report types and real export formats.
+
+Export tests read actual XLSX cells, CSV rows and paginated PDF output, including more than a preview page of records and long cells. Filtered history exports retain every matching row. Metric tests distinguish physical issue/return turnaround from request-to-receipt duration; backdated direct entries do not invent approval waits.
+
+## Browser and visual evidence
+
+The browser suite covers all fourteen screens, ten dashboard KPIs, eight reports, seven analytics panels, theme persistence, master registration/edit/activation and QR download, manual/QR/RFID lookup, unknown-code handling, issue reporting/acknowledgement/resolution, notification reads, independent mismatch approval, correction/resubmission, real XLSX/PDF/CSV downloads, guarded sample restoration, phone movement/receipt, Plant Manager monitoring, camera decoder fallback and permission denial, plant policy configuration and one-time reader provisioning.
+
+An additional local functional check visited all fourteen screens with external browser requests blocked. No external requests or browser errors occurred. Desktop screenshots at 1440px and phone screenshots at 390px were inspected. Phone pages had no page-wide horizontal overflow. Escape restored focus to the trolley-detail trigger, and theme changes retained a partially entered movement form. The application uses local fonts/icons/QR assets, SVG charts and server-side exports.
+
+## Reproduction
+
+```sh
+npm ci --ignore-scripts
+npm run check
+npm run format:check
+npm test
+npm run test:hosted
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:browser
+npm run test:load
+```
+
+Use `npx playwright install chromium` if no compatible Chromium is installed. Browser installation needs connectivity; local application use does not after dependencies are prepared. All automated operational fixtures use isolated databases.
+
+## Limits
+
+Linux results do not establish Windows CMD integration, real camera/device coverage, physical RFID drivers, durable device buffering, Docker execution, public HTTPS, multi-hour soak, multiple application instances, security certification or enterprise availability. Those need separate evidence.
+
+The private hosted demo remains the separate older D1/managed-identity adapter in `deploy/hosted-demo`. These changes do not automatically redeploy or port the Node application there. The historical 0.4 evidence is available in Git history and is not reused as current acceptance.

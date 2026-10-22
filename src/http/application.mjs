@@ -13,6 +13,9 @@ import { labelService } from '../services/labels.mjs';
 import { policyService } from '../services/policies.mjs';
 import { reportService } from '../services/reports.mjs';
 import { readerService } from '../services/readers.mjs';
+import { workflowService } from '../services/workflow.mjs';
+import { demoService } from '../services/demo.mjs';
+import { exportService } from '../services/exports.mjs';
 import { readJson } from './body.mjs';
 
 const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -20,12 +23,14 @@ const STATIC_FILES = {
   '/': ['index.html', 'text/html'],
   '/app.js': ['app.js', 'text/javascript'],
   '/api.js': ['api.js', 'text/javascript'],
-  '/ui.js': ['ui.js', 'text/javascript'],
-  '/views.js': ['views.js', 'text/javascript'],
   '/scanner.js': ['scanner.js', 'text/javascript'],
-  '/policy-views.js': ['policy-views.js', 'text/javascript'],
-  '/reader-views.js': ['reader-views.js', 'text/javascript'],
-  '/style.css': ['style.css', 'text/css'],
+  '/experience.js': ['experience.js', 'text/javascript'],
+  '/experience-ui.js': ['experience-ui.js', 'text/javascript'],
+  '/experience-shell.js': ['experience-shell.js', 'text/javascript'],
+  '/experience.css': ['experience.css', 'text/css'],
+  '/operations-views.js': ['operations-views.js', 'text/javascript'],
+  '/operations-model.js': ['operations-model.js', 'text/javascript'],
+  '/monitoring-views.js': ['monitoring-views.js', 'text/javascript'],
 };
 
 export function createApp({
@@ -48,6 +53,8 @@ export function createApp({
   const movements = movementService(repository, policies);
   const reports = reportService(repository);
   const labels = labelService(repository);
+  const workflow = workflowService(repository, policies, movements);
+  const demo = demoService(repository);
   let readers;
   try {
     readers = readerService(repository, deviceEncryptionKey);
@@ -99,7 +106,7 @@ export function createApp({
         const content = readFileSync(join(projectRoot, 'public', file[0]));
         response.setHeader(
           'Content-Security-Policy',
-          "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'",
+          "default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'",
         );
         response.writeHead(200, { 'Content-Type': file[1], 'Cache-Control': 'no-cache' });
         return response.end(content);
@@ -145,8 +152,97 @@ export function createApp({
         accounts.logout(user, token);
         return send(200, { ok: true }, { 'Set-Cookie': sessionCookie('', secureCookie, 0) });
       }
-      if (pathname === '/api/state' && request.method === 'GET')
-        return send(200, masters.state(user));
+      if (pathname === '/api/state' && request.method === 'GET') {
+        return send(200, { ...masters.state(user), ...workflow.state(user) });
+      }
+      if (pathname === '/api/trolleys/lookup' && request.method === 'GET')
+        return send(200, masters.lookup(user, url.searchParams.get('code') || ''));
+      if (pathname === '/api/settings' && request.method === 'GET')
+        return send(200, workflow.state(user).settings);
+      if (pathname === '/api/settings' && request.method === 'POST') {
+        if (['outside_approval', 'mismatch_approval'].some((key) => key in input))
+          workflow.configure(user, input);
+        if (
+          ['enforce_routes', 'enforce_categories', 'scope_operations'].some((key) => key in input)
+        )
+          policies.configure(user, input);
+        return send(200, workflow.state(user).settings);
+      }
+      if (pathname === '/api/alerts' && request.method === 'GET') {
+        workflow.synchronize();
+        return send(200, workflow.listAlerts(user, url.searchParams));
+      }
+      if (pathname === '/api/alerts' && request.method === 'POST')
+        return send(201, workflow.reportIssue(user, input));
+      const alertAction = pathname.match(/^\/api\/alerts\/(\d+)\/(acknowledge|resolve|reopen)$/);
+      if (alertAction && request.method === 'POST')
+        return send(200, workflow.alertAction(user, Number(alertAction[1]), alertAction[2], input));
+      if (pathname === '/api/notifications' && request.method === 'GET')
+        return send(200, workflow.notifications(user));
+      if (pathname === '/api/notifications/read' && request.method === 'POST')
+        return send(200, workflow.markRead(user, input));
+      if (pathname === '/api/verify' && request.method === 'POST')
+        return send(200, workflow.verify(user, input));
+      if (pathname === '/api/approvals' && request.method === 'GET')
+        return send(200, workflow.state(user).approvals);
+      if (pathname === '/api/approvals/mismatch' && request.method === 'POST')
+        return send(201, workflow.requestMismatch(user, input));
+      const approvalAction = pathname.match(
+        /^\/api\/approvals\/(\d+)\/(approve|reject|correct|resubmit)$/,
+      );
+      if (approvalAction && request.method === 'POST')
+        return send(
+          200,
+          workflow.approvalAction(user, Number(approvalAction[1]), approvalAction[2], input),
+        );
+      const overdueAction = pathname.match(/^\/api\/overdue\/([^/]+)\/(remind|return)$/);
+      if (overdueAction && request.method === 'POST') {
+        const id = decodeURIComponent(overdueAction[1]);
+        return send(
+          200,
+          overdueAction[2] === 'remind'
+            ? workflow.reminder(user, id, input)
+            : workflow.markReturned(user, id, input),
+        );
+      }
+      if (pathname === '/api/demo/load' && request.method === 'POST')
+        return send(201, demo.load(user, input));
+      if (pathname === '/api/demo/reset' && request.method === 'POST')
+        return send(200, demo.reset(user, input));
+      if (pathname === '/api/analytics' && request.method === 'GET')
+        return send(200, reports.analytics(user, url.searchParams));
+      const reportRoute = pathname.match(/^\/api\/reports\/([a-z-]+)(\/export)?$/);
+      if (reportRoute && reportRoute[1] !== 'summary' && request.method === 'GET') {
+        const parameters = new URLSearchParams(url.searchParams);
+        if (reportRoute[2]) for (const key of ['page', 'limit', 'before']) parameters.delete(key);
+        const report = reports.build(user, reportRoute[1], parameters);
+        if (!reportRoute[2]) return send(200, report);
+        const output = await exportService.toBuffer(
+          report,
+          url.searchParams.get('format') || 'xlsx',
+        );
+        response.writeHead(200, {
+          'Content-Type': output.contentType,
+          'Content-Disposition': `attachment; filename="${output.filename}"`,
+          'Cache-Control': 'no-store',
+        });
+        return response.end(output.buffer);
+      }
+      if (pathname === '/api/history/export' && request.method === 'GET') {
+        const parameters = new URLSearchParams(url.searchParams);
+        for (const key of ['page', 'limit', 'before']) parameters.delete(key);
+        const report = reports.historyReport(user, parameters);
+        const output = await exportService.toBuffer(
+          report,
+          url.searchParams.get('format') || 'csv',
+        );
+        response.writeHead(200, {
+          'Content-Type': output.contentType,
+          'Content-Disposition': `attachment; filename="${output.filename}"`,
+          'Cache-Control': 'no-store',
+        });
+        return response.end(output.buffer);
+      }
       if (pathname === '/api/policies' && request.method === 'GET')
         return send(200, policies.describe(user));
       if (pathname === '/api/policies/settings' && request.method === 'POST') {
@@ -193,6 +289,17 @@ export function createApp({
         masters.create(user, masterRoute[1], input);
         return send(201, { ok: true });
       }
+      const trolleyActivation = pathname.match(/^\/api\/trolleys\/([^/]+)\/active$/);
+      if (trolleyActivation && request.method === 'POST')
+        return send(200, masters.setActive(user, decodeURIComponent(trolleyActivation[1]), input));
+      const masterDetail = pathname.match(/^\/api\/(locations|products|trolleys)\/([^/]+)$/);
+      if (masterDetail && request.method === 'GET' && masterDetail[1] === 'trolleys')
+        return send(200, masters.detail(user, decodeURIComponent(masterDetail[2])));
+      if (masterDetail && request.method === 'POST')
+        return send(
+          200,
+          masters.update(user, masterDetail[1], decodeURIComponent(masterDetail[2]), input),
+        );
       if (pathname === '/api/movements' && request.method === 'POST') {
         return send(201, movements.request(user, input));
       }
@@ -219,5 +326,17 @@ export function createApp({
   server.requestTimeout = 15000;
   server.headersTimeout = 10000;
   server.keepAliveTimeout = 5000;
+  let synchronization;
+  server.on('listening', () => {
+    synchronization = setInterval(() => {
+      try {
+        workflow.synchronize();
+      } catch (error) {
+        logger({ event: 'workflow_sync_error', error: error.message });
+      }
+    }, 30000);
+    synchronization.unref();
+  });
+  server.on('close', () => clearInterval(synchronization));
   return { server, db: repository.raw, repository };
 }

@@ -200,7 +200,8 @@ test('full histories paginate without omissions and reports count real events', 
     assert.equal(second.items.length, 2);
     assert.equal(second.nextCursor, null);
     assert.equal(new Set([...first.items, ...second.items].map((record) => record.id)).size, 4);
-    const report = (await f.request('reports/summary', undefined, operator)).body;
+    assert.equal((await f.request('reports/summary', undefined, operator)).status, 403);
+    const report = (await f.request('reports/summary', undefined, f.admin)).body;
     assert.equal(report.totals.requested, 4);
     assert.equal(report.totals.rejected, 4);
     assert.equal((await f.request('history?limit=101', undefined, operator)).status, 400);

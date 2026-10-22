@@ -25,19 +25,26 @@ export function policyService(repository) {
     },
     configure(user, input) {
       requireRole(user, ['Admin']);
-      for (const key of ['enforce_routes', 'enforce_categories', 'scope_operations']) {
+      const keys = [
+        'enforce_routes',
+        'enforce_categories',
+        'scope_operations',
+        'outside_approval',
+        'mismatch_approval',
+      ];
+      const supplied = keys.filter((key) => key in input);
+      if (!supplied.length) fail(400, 'Provide at least one policy setting');
+      for (const key of supplied)
         if (typeof input[key] !== 'boolean') fail(400, `Provide a boolean for ${key}`);
-      }
       repository.transaction(() => {
         const previous = settings();
         repository.run(
-          'UPDATE plant_settings SET enforce_routes = ?, enforce_categories = ?, scope_operations = ? WHERE id = 1',
-          Number(input.enforce_routes),
-          Number(input.enforce_categories),
-          Number(input.scope_operations),
+          `UPDATE plant_settings SET ${supplied.map((key) => `${key} = ?`).join(', ')} WHERE id = 1`,
+          ...supplied.map((key) => Number(input[key])),
         );
         repository.audit(user, 'Plant policy updated', 'plant', { previous, current: input });
       });
+      return settings();
     },
     addRule(user, kind, input) {
       requireRole(user, MANAGER_ROLES);
@@ -127,6 +134,12 @@ export function policyService(repository) {
         (trolley.product !== product.id || trolley.batch !== batch)
       ) {
         flags.push('Declared product or batch differs from the current trolley load');
+      }
+      if (quantity > 0 && product.allowed_groups) {
+        const allowed = JSON.parse(product.allowed_groups);
+        const location = repository.get('SELECT * FROM locations WHERE id = ?', destination);
+        if (allowed.length && !allowed.includes(location.group_name))
+          flags.push('Product is not approved for the destination location group');
       }
       return { flags, requiresQuality: Boolean(route?.requires_quality) };
     },

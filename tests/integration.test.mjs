@@ -126,7 +126,7 @@ test('restart keeps records, existing password and migration versions', async ()
     f = await fixture(path);
     const state = (await f.request('state', undefined, f.admin)).body;
     assert.equal(state.trolleys.length, 1);
-    assert.equal(f.repository.all('SELECT * FROM schema_migrations').length, 4);
+    assert.equal(f.repository.all('SELECT * FROM schema_migrations').length, 5);
   } finally {
     await f.close();
     rmSync(directory, { recursive: true, force: true });
@@ -160,7 +160,16 @@ test('production static entrypoint serves frontend modules with restrictive CSP'
     assert.equal(response.status, 200);
     assert.ok(response.headers.get('content-security-policy').includes("script-src 'self'"));
     assert.ok((await response.text()).includes('type="module"'));
-    for (const path of ['/app.js', '/api.js', '/views.js', '/ui.js']) {
+    for (const path of [
+      '/app.js',
+      '/api.js',
+      '/experience.js',
+      '/experience-ui.js',
+      '/experience-shell.js',
+      '/operations-model.js',
+      '/operations-views.js',
+      '/monitoring-views.js',
+    ]) {
       const module = await fetch(f.base + path);
       assert.equal(module.status, 200);
       assert.equal(module.headers.get('content-type'), 'text/javascript');

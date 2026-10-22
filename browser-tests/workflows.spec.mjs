@@ -16,10 +16,16 @@ async function signIn(page, username = 'admin') {
   await page.getByLabel('Username', { exact: true }).fill(username);
   await page.getByLabel('Password', { exact: true }).fill('test-password-123');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Plant overview' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Know what moved, where it is, and when its location changed.',
+    }),
+  ).toBeVisible();
 }
 async function navigate(page, name, heading) {
-  await page.getByRole('button', { name, exact: true }).click();
+  if (await page.getByRole('button', { name: 'Open menu', exact: true }).isVisible())
+    await page.getByRole('button', { name: 'Open menu', exact: true }).click();
+  await page.locator('#nav').getByRole('button', { name, exact: true }).click();
   await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 }
 
@@ -34,10 +40,10 @@ for (const viewport of [
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await signIn(page, 'operator');
-    await navigate(page, 'Move / scan', 'Move or scan a trolley');
-    await page.getByLabel('Scan / trolley ID', { exact: true }).fill('TR-001');
+    await navigate(page, 'Movement', 'Record trolley movement');
+    await page.getByLabel('Trolley ID', { exact: true }).fill('TR-001');
     await page.getByLabel('Destination', { exact: true }).selectOption('LINE');
-    await page.getByLabel('Product', { exact: true }).selectOption('P1');
+    await page.getByLabel('Product / material', { exact: true }).selectOption('P1');
     await page.getByLabel('Batch', { exact: true }).fill('B1');
     await page.getByLabel('Quantity (capacity units)', { exact: true }).fill('50');
     await page.getByLabel('Expected arrival / return', { exact: true }).fill('2030-01-01T12:00');
@@ -45,10 +51,13 @@ for (const viewport of [
     await expect(page.getByRole('button', { name: 'Confirm arrival', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Confirm arrival', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Confirm arrival', exact: true })).toHaveCount(0);
-    await navigate(page, 'Trolley fleet', 'Trolley fleet');
+    await navigate(page, 'Live Tracking', 'Trolley fleet');
     if (viewport.width < 850)
       await expect(page.locator('.trolley-cards').getByText('Line', { exact: true })).toBeVisible();
-    else await expect(page.getByRole('cell', { name: 'Line', exact: true })).toBeVisible();
+    else {
+      await page.getByRole('button', { name: 'Table', exact: true }).click();
+      await expect(page.getByRole('cell', { name: 'Line', exact: true })).toBeVisible();
+    }
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
@@ -98,9 +107,9 @@ test('camera fallback decodes a real QR image, fills the form and stops the stre
     { dataUrl },
   );
   await signIn(page, 'operator');
-  await navigate(page, 'Move / scan', 'Move or scan a trolley');
+  await navigate(page, 'Movement', 'Record trolley movement');
   await page.getByRole('button', { name: 'Scan with camera' }).click();
-  await expect(page.getByLabel('Scan / trolley ID', { exact: true })).toHaveValue('TR-001');
+  await expect(page.getByLabel('Trolley ID', { exact: true })).toHaveValue('TR-001');
   await expect(page.locator('#scan-status')).toContainText('Scanned TR-001');
   await expect.poll(() => page.evaluate(() => window.stoppedCameraTracks)).toBeGreaterThan(0);
   expect(application.repository.get('SELECT COUNT(*) AS n FROM movements').n).toBe(0);
@@ -113,22 +122,23 @@ test('camera permission rejection preserves USB and manual workflows', async ({ 
     };
   });
   await signIn(page);
-  await navigate(page, 'Move / scan', 'Move or scan a trolley');
+  await navigate(page, 'Movement', 'Record trolley movement');
   await page.getByRole('button', { name: 'Scan with camera' }).click();
   await expect(page.locator('#scan-status')).toContainText('Camera permission denied');
-  await page.getByLabel('Scan / trolley ID', { exact: true }).fill('TR-001');
-  await expect(page.getByLabel('Scan / trolley ID', { exact: true })).toHaveValue('TR-001');
+  await page.getByLabel('Trolley ID', { exact: true }).fill('TR-001');
+  await expect(page.getByLabel('Trolley ID', { exact: true })).toHaveValue('TR-001');
 });
 
 test('administrator can configure plant policy and provision a one-time reader credential', async ({
   page,
 }) => {
   await signIn(page);
-  await navigate(page, 'Plant rules', 'Plant rules');
+  await navigate(page, 'Settings', 'Settings');
+  await page.getByRole('button', { name: 'Plant rules', exact: true }).click();
   await page.getByLabel('Enforce allowed product routes', { exact: true }).check();
   await page.getByRole('button', { name: 'Save enforcement', exact: true }).click();
   await expect(page.getByLabel('Enforce allowed product routes', { exact: true })).toBeChecked();
-  await navigate(page, 'Readers & tags', 'Readers & tags');
+  await page.getByRole('button', { name: 'Readers & tags', exact: true }).click();
   await page.getByLabel('Reader ID', { exact: true }).fill('LINE-GATE');
   await page.getByLabel('Reader name', { exact: true }).fill('Line entrance');
   await page.getByLabel('Installed location', { exact: true }).selectOption('LINE');

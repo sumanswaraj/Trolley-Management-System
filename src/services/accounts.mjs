@@ -7,6 +7,7 @@ import {
   tokenHash,
   requireRole,
   USER_ROLES,
+  accessFor,
 } from '../security.mjs';
 
 export function accountService(repository, initialAdminPassword) {
@@ -61,7 +62,10 @@ export function accountService(repository, initialAdminPassword) {
         now + 8 * 60 * 60 * 1000,
       );
       repository.audit(user, 'Signed in', username, {});
-      return { token, user: { id: user.id, name: user.name, role: user.role } };
+      return {
+        token,
+        user: { id: user.id, name: user.name, role: user.role, access: accessFor(user) },
+      };
     },
     authenticate(cookieHeader = '') {
       const token = cookieHeader
@@ -80,7 +84,7 @@ export function accountService(repository, initialAdminPassword) {
           Date.now(),
         );
       if (!user) fail(401, 'Sign in required');
-      return { user, token };
+      return { user: { ...user, access: accessFor(user) }, token };
     },
     logout(user, token) {
       repository.run('DELETE FROM sessions WHERE token = ?', tokenHash(token));
