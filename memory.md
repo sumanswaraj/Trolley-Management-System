@@ -36,6 +36,8 @@ The implementation source is commit c84bd3b. After the user accepted the collabo
 
 On 1 November 2026, the user requested a handover report and GitHub push. [handover.md](handover.md) consolidates the 0.5.0 delivery baseline, operating procedures, historical validation and receiving-owner checklist. This is documentation-only work; the 22 October application/browser evidence must not be presented as newly rerun tests. The review corrected stale API descriptions of master creation (Admin only) and a removed `public/ui.js` module reference. Formatting, local Markdown link targets and whitespace checks passed. Receiving owners and Windows, hardware, recovery and infrastructure acceptance remain unassigned/unverified as specified in the report.
 
+The handover source is commit `2dfe04c`. Its push to `origin/codex/trolley-v0.5.0` succeeded on 1 November 2026 and the remote commit ID was verified. The default `main` branch and hosted deployment were not changed.
+
 ## Recording rules
 
 Never record credential values, tokens, customer data or a complete environment dump here. Separate observations from assumptions. When a decision changes, update the requirement/design/task that governs it and summarize the reason here; avoid leaving contradictory instructions across documents.

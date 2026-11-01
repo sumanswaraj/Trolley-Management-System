@@ -50,6 +50,8 @@ Delivery: GitHub write access was restored and the authorized push succeeded on 
 - [x] Prepare [handover.md](handover.md) covering delivery/source baseline, all fourteen pages, access rules, code map, Windows setup, safe upgrades, configuration custody, backup/recovery, validation and remaining owner acceptance.
 - [x] Link the report from README and correct stale API master-write permissions and the removed frontend helper reference.
 - [x] Check handover formatting, repository links and whitespace; retain the original dates for software acceptance evidence.
-- [ ] Commit and push the handover on the existing delivery branch, then verify the remote commit.
+- [x] Commit and push the handover on the existing delivery branch, then verify the remote commit.
+
+Handover delivery: commit `2dfe04c` was pushed to `origin/codex/trolley-v0.5.0` on 1 November 2026, and the remote branch matched the full local commit ID. Documentation checks passed, including 32 local Markdown link targets across seven changed documents. No application suites were rerun for this documentation-only update.
 
 Windows/device/infrastructure acceptance and named receiving-owner assignments remain open as listed in the handover report.
