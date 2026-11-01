@@ -32,6 +32,10 @@ Windows execution, actual cameras/RFID hardware, Docker, public HTTPS and the se
 
 The implementation source is commit c84bd3b. After the user accepted the collaborator invitation, the authorized push succeeded on 2026-10-22 to remote branch `codex/trolley-v0.5.0`. GitHub access is no longer blocked. Use that branch for the updated source download; `main` and the separately hosted demo were not changed. Future pushes should reuse the existing Git proxy authentication without changing Git author identity or requesting tokens in chat.
 
+## Handover
+
+On 1 November 2026, the user requested a handover report and GitHub push. [handover.md](handover.md) consolidates the 0.5.0 delivery baseline, operating procedures, historical validation and receiving-owner checklist. This is documentation-only work; the 22 October application/browser evidence must not be presented as newly rerun tests. The review corrected stale API descriptions of master creation (Admin only) and a removed `public/ui.js` module reference. Formatting, local Markdown link targets and whitespace checks passed. Receiving owners and Windows, hardware, recovery and infrastructure acceptance remain unassigned/unverified as specified in the report.
+
 ## Recording rules
 
 Never record credential values, tokens, customer data or a complete environment dump here. Separate observations from assumptions. When a decision changes, update the requirement/design/task that governs it and summarize the reason here; avoid leaving contradictory instructions across documents.

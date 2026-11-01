@@ -45,3 +45,9 @@ Use `npx playwright install chromium` if no compatible Chromium is installed. Br
 Linux results do not establish Windows CMD integration, real camera/device coverage, physical RFID drivers, durable device buffering, Docker execution, public HTTPS, multi-hour soak, multiple application instances, security certification or enterprise availability. Those need separate evidence.
 
 The private hosted demo remains the separate older D1/managed-identity adapter in `deploy/hosted-demo`. These changes do not automatically redeploy or port the Node application there. The historical 0.4 evidence is available in Git history and is not reused as current acceptance.
+
+## Handover documentation review — 1 November 2026
+
+Added [handover.md](../handover.md) and its README entry, recorded continuation tasks/memory, corrected API master creation to Admin-only and removed the stale `public/ui.js` architecture reference. No application behavior, dependency, migration or deployment files changed.
+
+`npm run format:check`, local Markdown link-target validation for the changed documents and `git diff --check` passed. The report's setup/recovery procedures, roles, source map and limits were checked against the implementation and runbooks. The software/browser/load suites above were not rerun for this documentation-only update; their acceptance date remains 22 October 2026. Remote CI execution and platform/device acceptance are not established by these checks.

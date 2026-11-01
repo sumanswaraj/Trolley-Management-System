@@ -12,7 +12,7 @@ The canonical root overview is [architecture.md](../architecture.md). This docum
 | `public/monitoring-views.js`                             | Dashboard, fleet, overdue, locations, history, reports and analytics rendering.                       |
 | `public/operations-views.js`, `operations-model.js`      | Masters, scan/movement/product workflows, alerts, approvals, settings and their presentation helpers. |
 | `public/experience.css`                                  | Offline system fonts, reference visual system and desktop/phone accessibility.                        |
-| `public/api.js`, `experience-ui.js`, `ui.js`             | Same-origin transport, errors, escaping and common rendering helpers.                                 |
+| `public/api.js`, `experience-ui.js`                      | Same-origin transport, errors, escaping and common rendering helpers.                                 |
 | `src/http/application.mjs`                               | Static allowlist, HTTP boundaries, routing, headers and export responses.                             |
 | `src/services/masters.mjs`                               | Master lifecycle, identity lookup, detail/state and protected operational fields.                     |
 | `src/services/movements.mjs`, `policies.mjs`             | Transactional movements, capacity/units, approval, receipt, route/type and location rules.            |

@@ -2,6 +2,8 @@
 
 Version 0.5.0 connects the supplied fourteen-page reference interface to the authenticated Node.js application and persistent SQLite database. It includes six account roles, trolley tracking, movement/approval/correction workflows, alerts, local QR scanning, and real CSV, XLSX and PDF exports. Final integrated release verification is tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
 
+See [handover.md](handover.md) for the delivery baseline, feature/code map, Windows setup, upgrade and recovery procedures, validation evidence and receiving-owner checklist.
+
 ## Run locally
 
 1. Install Node.js 24 or later.

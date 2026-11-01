@@ -44,3 +44,12 @@ Status: Node 0.5.0 software implementation and local acceptance are complete. Gi
 Validation on 2026-10-22: 46 application tests, 3 hosted-adapter tests and 13 browser tests passed; the isolated 400-request smoke had zero failures. Syntax, Prettier and whitespace checks passed. Offline browser routing, desktop/phone screenshots and keyboard modal focus were checked. See docs/VALIDATION.md for scope and platform limits.
 
 Delivery: GitHub write access was restored and the authorized push succeeded on 2026-10-22. Version 0.5.0 is available on remote branch `codex/trolley-v0.5.0` in `sumanswaraj/Trolley-Management-System`. The source implementation commit is c84bd3b. The default `main` branch and separate hosted deployment were not changed by this branch push.
+
+## Handover — 1 November 2026
+
+- [x] Prepare [handover.md](handover.md) covering delivery/source baseline, all fourteen pages, access rules, code map, Windows setup, safe upgrades, configuration custody, backup/recovery, validation and remaining owner acceptance.
+- [x] Link the report from README and correct stale API master-write permissions and the removed frontend helper reference.
+- [x] Check handover formatting, repository links and whitespace; retain the original dates for software acceptance evidence.
+- [ ] Commit and push the handover on the existing delivery branch, then verify the remote commit.
+
+Windows/device/infrastructure acceptance and named receiving-owner assignments remain open as listed in the handover report.
